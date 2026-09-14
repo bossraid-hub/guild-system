@@ -174,12 +174,6 @@
           </div>
           <p class="text-xs text-slate-400 mt-1">點擊打勾方塊切換出勤；後方「備註」直接輸入打王具體時段（全員雲端同步）</p>
         </div>
-
-        <div>
-          <button @click="clearAllDefault" class="text-xs bg-red-950/40 hover:bg-red-900/60 border border-red-800 text-red-300 px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-bold transition shadow">
-            <i class="fa-regular fa-trash-can"></i> 清空名單
-          </button>
-        </div>
       </div>
 
       <!-- 篩選列 -->
@@ -237,7 +231,6 @@
                   <span v-else>•</span>
                 </button>
               </td>
-              <!-- 雙行時段備註欄 (固定高度 + 自動折行) -->
               <td class="py-3 px-2">
                 <textarea 
                   v-model="item.note" 
@@ -498,15 +491,6 @@
           }
         };
 
-        const clearAllDefault = () => {
-          if (confirm('⚠️ 警告：這將會清空雲端上所有人的名單！確定要清空嗎？')) {
-            db.value.thisWeek = [];
-            db.value.nextWeek = [];
-            selectedUser.value = '';
-            syncToCloud();
-          }
-        };
-
         const toggleDay = (item, dayIdx) => {
           item.availability[dayIdx] = !item.availability[dayIdx];
           syncToCloud();
@@ -552,7 +536,7 @@
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           currentList, filterBoss, searchKeyword, form, filteredList,
           openAddModal, openEditModal, saveMember, deleteMember,
-          clearAllDefault, toggleDay, toggleBoss, submitSignup, syncToCloud
+          toggleDay, toggleBoss, submitSignup, syncToCloud
         };
       }
     }).mount('#app');

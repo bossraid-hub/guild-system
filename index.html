@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>公會出團系統 - Hub Edition</title>
+  <title>BOSSRAID HUB</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -30,24 +30,26 @@
 <body class="bg-ph-black text-slate-200 min-h-screen p-3 md:p-6 font-sans select-none">
   <div id="app" class="max-w-5xl mx-auto space-y-4">
 
-    <!-- 頂部導覽列：PH Logo 風格 -->
+    <!-- 頂部導覽列：BOSSRAID HUB -->
     <header class="bg-ph-card border border-ph-border rounded-2xl p-4 flex justify-between items-center shadow-2xl">
       <div class="flex items-center space-x-3">
-        <!-- 招牌 PH 膠囊 Logo -->
-        <div class="flex items-center font-black text-xl tracking-tighter">
-          <span class="text-white px-1">GUILD</span>
+        <!-- PH 膠囊風格 Logo -->
+        <div class="flex items-center font-black text-lg md:text-xl tracking-tighter">
+          <span class="text-white px-1">BOSSRAID</span>
           <span class="bg-ph-orange text-black px-2 py-0.5 rounded-lg ml-0.5">HUB</span>
         </div>
         <div>
           <div class="flex items-center space-x-2">
-            <span class="text-xs bg-ph-surface text-ph-orange border border-ph-orange/30 px-2 py-0.5 rounded font-mono font-bold">本週 09/08 - 09/14</span>
+            <span class="text-xs bg-ph-surface text-ph-orange border border-ph-orange/30 px-2 py-0.5 rounded font-mono font-bold">
+              {{ currentWeekKey === 'thisWeek' ? '本週 09/08 - 09/14' : '下週 09/15 - 09/21' }}
+            </span>
           </div>
           <p class="text-[11px] text-slate-400">組隊・刷王・出勤統計</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
-        <button @click="showAddModal = true" class="text-xs bg-ph-orange hover:bg-ph-hover text-black font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow">
+        <button @click="openAddModal" class="text-xs bg-ph-orange hover:bg-ph-hover text-black font-black px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow">
           <i class="fa-solid fa-user-plus"></i> 登記新角色
         </button>
       </div>
@@ -67,7 +69,7 @@
         :class="currentTab === 'list' ? 'bg-ph-orange text-black font-black' : 'text-slate-400 hover:text-white'"
         class="px-4 py-2 rounded-lg transition flex items-center gap-1.5 font-bold"
       >
-        <i class="fa-solid fa-list-check"></i> 報名名單 ({{ filteredList.length }}人)
+        <i class="fa-solid fa-list-check"></i> 報名名單 ({{ currentList.length }}人)
       </button>
     </nav>
 
@@ -78,32 +80,49 @@
           <h2 class="text-base font-bold text-white flex items-center gap-2">
             <i class="fa-regular fa-calendar-plus text-ph-orange"></i> 每週快速報名
           </h2>
-          <p class="text-xs text-slate-400 mt-1">選好角色與想打的王，一鍵更新報名狀態</p>
+          <p class="text-xs text-slate-400 mt-1">切換本週/下週報名，一次更新副本項目</p>
         </div>
-        <button @click="showAddModal = true" class="text-xs text-ph-orange hover:underline">找不到你的 ID？點此登記</button>
+        <button @click="openAddModal" class="text-xs text-ph-orange hover:underline font-bold">+ 登記新成員</button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 角色選擇 -->
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">選擇角色</label>
           <select v-model="selectedUser" class="w-full bg-ph-surface border border-ph-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-ph-orange">
-            <option value="" disabled>請選擇已登記的角色...</option>
-            <option v-for="u in members" :key="u.name" :value="u.name">{{ u.name }} [{{ u.job }} Lv.{{ u.level }}]</option>
+            <option value="" disabled>請選擇您的角色...</option>
+            <option v-for="u in currentList" :key="u.id" :value="u.id">{{ u.name }} [{{ u.job }} Lv.{{ u.level }}]</option>
           </select>
         </div>
 
+        <!-- 激活的週次切換按鈕 -->
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">選擇週次</label>
           <div class="flex gap-2">
-            <button class="flex-1 py-2.5 text-xs rounded-xl border border-ph-orange bg-ph-orange/10 text-ph-orange font-black">本週 09/08(二) - 09/14(一)</button>
-            <button class="flex-1 py-2.5 text-xs rounded-xl border border-ph-border bg-ph-surface text-slate-400 hover:text-white">下週 09/15(二) - 09/21(一)</button>
+            <button 
+              @click="currentWeekKey = 'thisWeek'"
+              :class="currentWeekKey === 'thisWeek' ? 'border-ph-orange bg-ph-orange/15 text-ph-orange font-black shadow' : 'border-ph-border bg-ph-surface text-slate-400 hover:text-white'"
+              class="flex-1 py-2.5 text-xs rounded-xl border transition"
+            >
+              本週 09/08(二) - 09/14(一)
+            </button>
+            <button 
+              @click="currentWeekKey = 'nextWeek'"
+              :class="currentWeekKey === 'nextWeek' ? 'border-ph-orange bg-ph-orange/15 text-ph-orange font-black shadow' : 'border-ph-border bg-ph-surface text-slate-400 hover:text-white'"
+              class="flex-1 py-2.5 text-xs rounded-xl border transition"
+            >
+              下週 09/15(二) - 09/21(一)
+            </button>
           </div>
         </div>
       </div>
 
+      <!-- 副本選擇 -->
       <div>
         <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-bold text-slate-300">副本報名（每週最多 2 次）</label>
+          <label class="text-xs font-bold text-slate-300">
+            副本報名（每週最多 2 次）- <span class="text-ph-orange">{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}</span>
+          </label>
           <span class="text-xs font-mono font-bold" :class="selectedBosses.length === 2 ? 'text-ph-orange' : 'text-slate-500'">已選 {{ selectedBosses.length }}/2</span>
         </div>
 
@@ -126,7 +145,7 @@
       </div>
 
       <button @click="submitSignup" :disabled="!selectedUser || selectedBosses.length === 0" class="w-full py-3 bg-ph-orange hover:bg-ph-hover disabled:bg-ph-surface disabled:text-slate-600 text-black text-sm font-black rounded-xl transition shadow-lg">
-        儲存本週報名
+        儲存{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}報名
       </button>
     </main>
 
@@ -139,16 +158,26 @@
               <i class="fa-solid fa-list-ol text-ph-orange"></i> 報名名單
             </h2>
             <span class="text-xs text-black bg-ph-orange font-black px-2 py-0.5 rounded-full">({{ filteredList.length }} 人)</span>
+            <!-- 週次切換按鈕（在名單頁也能快速切） -->
+            <div class="inline-flex bg-ph-surface rounded-lg p-0.5 border border-ph-border ml-2">
+              <button @click="currentWeekKey = 'thisWeek'" :class="currentWeekKey === 'thisWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2 py-0.5 text-[10px] rounded transition">本週</button>
+              <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2 py-0.5 text-[10px] rounded transition">下週</button>
+            </div>
           </div>
-          <p class="text-xs text-slate-400 mt-1">點擊日期方塊可直接切換當天「可出勤 / 無法出席」</p>
+          <p class="text-xs text-slate-400 mt-1">點擊打勾方塊切換出勤；支援【編輯名稱】與【刪除範例】</p>
         </div>
 
-        <button @click="copyAIPrompt" class="self-start sm:self-auto text-xs bg-ph-surface hover:bg-ph-border border border-ph-orange/50 text-ph-orange px-4 py-2.5 rounded-xl flex items-center gap-2 font-black transition shadow">
-          <i class="fa-solid fa-robot"></i> 複製 AI 分隊提示詞
-        </button>
+        <div class="flex gap-2">
+          <button @click="clearAllDefault" class="text-xs bg-red-950/40 hover:bg-red-900/60 border border-red-800 text-red-300 px-3 py-2 rounded-xl flex items-center gap-1 font-bold transition">
+            <i class="fa-regular fa-trash-can"></i> 清空範例
+          </button>
+          <button @click="copyAIPrompt" class="text-xs bg-ph-surface hover:bg-ph-border border border-ph-orange/50 text-ph-orange px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-black transition shadow">
+            <i class="fa-solid fa-robot"></i> 複製 AI 分隊詞
+          </button>
+        </div>
       </div>
 
-      <!-- 篩選器 -->
+      <!-- 篩選列 -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         <select v-model="filterBoss" class="bg-ph-surface border border-ph-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ph-orange">
           <option value="all">所有副本</option>
@@ -163,19 +192,23 @@
 
       <!-- 出勤勾選矩陣表格 -->
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[650px]">
+        <table class="w-full text-left border-collapse min-w-[700px]">
           <thead>
             <tr class="border-b border-ph-border text-[11px] text-slate-400">
-              <th class="py-3 px-3 w-48">成員資訊</th>
+              <th class="py-3 px-3 w-52">成員資訊</th>
               <th class="py-3 px-3 w-36">報名副本</th>
-              <th v-for="day in weekDays" :key="day.date" class="py-3 px-2 text-center">
+              <th v-for="day in activeWeekDays" :key="day.date" class="py-3 px-2 text-center">
                 <div class="font-bold text-white">{{ day.label }}</div>
                 <div class="text-[10px] text-slate-500 font-mono">{{ day.date }}</div>
               </th>
+              <th class="py-3 px-3 text-center w-24">操作</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-ph-border/60 text-xs">
-            <tr v-for="item in filteredList" :key="item.name" class="hover:bg-ph-surface/50 transition">
+            <tr v-if="filteredList.length === 0">
+              <td colspan="10" class="text-center py-8 text-slate-500">目前尚無角色名單，點擊右上角「登記新角色」即可新增！</td>
+            </tr>
+            <tr v-for="item in filteredList" :key="item.id" class="hover:bg-ph-surface/50 transition">
               <!-- 成員 ID 與 職業 -->
               <td class="py-3 px-3">
                 <div class="font-bold text-white text-sm tracking-wide">{{ item.name }}</div>
@@ -186,14 +219,14 @@
               </td>
               <!-- 副本 -->
               <td class="py-3 px-3">
-                <div class="font-bold text-slate-200">{{ item.boss || '未指定' }}</div>
+                <div class="font-bold text-slate-200">{{ item.boss || '未報名' }}</div>
                 <div class="text-[10px] text-slate-400 mt-0.5">1次 / 週</div>
               </td>
-              <!-- 點擊切換每日出席狀態 -->
+              <!-- 每日出席切換 -->
               <td v-for="(available, dayIdx) in item.availability" :key="dayIdx" class="py-3 px-2 text-center">
                 <button 
                   @click="toggleDay(item, dayIdx)"
-                  title="點擊切換狀態"
+                  title="點擊切換出席"
                   :class="available ? 'bg-ph-orange text-black border-ph-orange shadow-md scale-105' : 'bg-ph-surface border-ph-border text-slate-600 hover:border-slate-400'"
                   class="w-7 h-7 rounded-lg border text-xs font-black inline-flex items-center justify-center transition"
                 >
@@ -201,40 +234,52 @@
                   <span v-else>•</span>
                 </button>
               </td>
+              <!-- 操作：編輯 & 刪除 -->
+              <td class="py-3 px-3 text-center">
+                <div class="flex items-center justify-center gap-1.5">
+                  <button @click="openEditModal(item)" title="編輯此角色" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-ph-border text-sky-400 border border-ph-border flex items-center justify-center transition">
+                    <i class="fa-solid fa-pen text-[11px]"></i>
+                  </button>
+                  <button @click="deleteMember(item.id)" title="刪除角色" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-red-900/40 text-red-400 border border-ph-border hover:border-red-600 flex items-center justify-center transition">
+                    <i class="fa-solid fa-trash text-[11px]"></i>
+                  </button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </main>
 
-    <!-- 登記新角色彈窗 (Modal) -->
-    <div v-if="showAddModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <!-- 登記 / 編輯角色彈窗 (Modal) -->
+    <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div class="bg-ph-card border border-ph-border rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
         <div class="flex justify-between items-center border-b border-ph-border pb-3">
           <h3 class="font-bold text-white text-base flex items-center gap-2">
-            <span class="bg-ph-orange text-black px-1.5 py-0.5 rounded text-xs font-black">NEW</span> 登記角色資料
+            <span class="bg-ph-orange text-black px-1.5 py-0.5 rounded text-xs font-black">{{ isEditMode ? 'EDIT' : 'NEW' }}</span>
+            {{ isEditMode ? '編輯角色資料' : '登記新角色' }}
           </h3>
-          <button @click="showAddModal = false" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+          <button @click="showModal = false" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
 
         <div class="space-y-3 text-xs">
           <div>
-            <label class="block font-bold text-slate-300 mb-1">遊戲角色 ID</label>
-            <input v-model="newForm.name" type="text" placeholder="例如：煞氣a牛排" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
+            <label class="block font-bold text-slate-300 mb-1">角色 ID / 玩家暱稱</label>
+            <input v-model="form.name" type="text" placeholder="輸入遊戲 ID" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
           </div>
           <div>
             <label class="block font-bold text-slate-300 mb-1">職業</label>
-            <input v-model="newForm.job" type="text" placeholder="例如：夜使者、主教、英雄" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
+            <input v-model="form.job" type="text" placeholder="例如：主教、夜使者、英雄" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
           </div>
           <div>
             <label class="block font-bold text-slate-300 mb-1">等級 (Lv)</label>
-            <input v-model.number="newForm.level" type="number" placeholder="例如：160" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
+            <input v-model.number="form.level" type="number" placeholder="例如：160" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
           </div>
         </div>
 
         <div class="flex gap-2 pt-2">
-          <button @click="showAddModal = false" class="flex-1 py-2.5 bg-ph-surface text-slate-300 rounded-xl font-bold hover:bg-ph-border transition">取消</button>
-          <button @click="handleAddMember" class="flex-1 py-2.5 bg-ph-orange hover:bg-ph-hover text-black rounded-xl font-black transition">確認登記</button>
+          <button @click="showModal = false" class="flex-1 py-2.5 bg-ph-surface text-slate-300 rounded-xl font-bold hover:bg-ph-border transition">取消</button>
+          <button @click="saveMember" class="flex-1 py-2.5 bg-ph-orange hover:bg-ph-hover text-black rounded-xl font-black transition">儲存確認</button>
         </div>
       </div>
     </div>
@@ -247,13 +292,17 @@
     createApp({
       setup() {
         const currentTab = ref('list');
-        const showAddModal = ref(false);
+        const currentWeekKey = ref('thisWeek'); // 'thisWeek' or 'nextWeek'
+        const showModal = ref(false);
+        const isEditMode = ref(false);
+        const editTargetId = ref(null);
+
         const selectedUser = ref('');
         const selectedBosses = ref(['闇黑龍王']);
         const filterBoss = ref('all');
         const searchKeyword = ref('');
 
-        const newForm = ref({ name: '', job: '', level: '' });
+        const form = ref({ name: '', job: '', level: 160 });
 
         const bosses = ref([
           { id: 'papulatus', name: '拉圖斯', icon: '⏰' },
@@ -262,60 +311,124 @@
           { id: 'horntail', name: '闇黑龍王', icon: '🐉' }
         ]);
 
-        const weekDays = [
-          { label: '二', date: '08' },
-          { label: '三', date: '09' },
-          { label: '四', date: '10' },
-          { label: '五', date: '11' },
-          { label: '六', date: '12' },
-          { label: '日', date: '13' },
-          { label: '一', date: '14' }
+        const thisWeekDays = [
+          { label: '二', date: '08' }, { label: '三', date: '09' }, { label: '四', date: '10' },
+          { label: '五', date: '11' }, { label: '六', date: '12' }, { label: '日', date: '13' }, { label: '一', date: '14' }
         ];
 
-        // 讀取快取或載入預設名單
-        const defaultMembers = [
-          { name: 'Haewonderful', job: '英雄', level: 163, boss: '闇黑龍王', availability: [true, true, true, false, true, true, true] },
-          { name: '金冬甜不甜', job: '黑騎', level: 176, boss: '闇黑龍王', availability: [false, true, true, true, false, true, true] },
-          { name: 'Ishtar', job: '箭神', level: 158, boss: '闇黑龍王', availability: [true, true, true, true, true, true, true] },
-          { name: '在你臉上射一發', job: '神射', level: 161, boss: '闇黑龍王', availability: [true, true, true, true, true, true, true] },
-          { name: 'ITZY的狗狗', job: '神射', level: 150, boss: '闇黑龍王', availability: [true, true, true, false, false, true, false] },
-          { name: '肩膀長小狗', job: '刀賊', level: 165, boss: '闇黑龍王', availability: [true, true, true, true, true, true, true] },
-          { name: '阿Cho霸', job: '拳霸', level: 163, boss: '闇黑龍王', availability: [true, true, true, true, true, true, true] },
-          { name: '13', job: '火毒', level: 172, boss: '闇黑龍王', availability: [true, true, true, false, true, true, true] }
+        const nextWeekDays = [
+          { label: '二', date: '15' }, { label: '三', date: '16' }, { label: '四', date: '17' },
+          { label: '五', date: '18' }, { label: '六', date: '19' }, { label: '日', date: '20' }, { label: '一', date: '21' }
         ];
 
-        const saved = localStorage.getItem('guild_members_hub');
-        const members = ref(saved ? JSON.parse(saved) : defaultMembers);
+        const activeWeekDays = computed(() => {
+          return currentWeekKey.value === 'thisWeek' ? thisWeekDays : nextWeekDays;
+        });
 
-        // 資料變動時寫入 LocalStorage
-        watch(members, (newVal) => {
-          localStorage.setItem('guild_members_hub', JSON.stringify(newVal));
-        }, { deep: true });
-
-        // 點擊登記新成員
-        const handleAddMember = () => {
-          if (!newForm.value.name.trim() || !newForm.value.job.trim()) {
-            alert('請完整輸入 ID 與職業！');
-            return;
-          }
-          members.value.unshift({
-            name: newForm.value.name.trim(),
-            job: newForm.value.job.trim(),
-            level: newForm.value.level || 150,
-            boss: '闇黑龍王',
-            availability: [true, true, true, true, true, true, true]
-          });
-          selectedUser.value = newForm.value.name.trim();
-          newForm.value = { name: '', job: '', level: '' };
-          showAddModal.value = false;
-          alert('登記成功！');
+        // 預設資料
+        const initialData = {
+          thisWeek: [
+            { id: '1', name: 'Haewonderful', job: '英雄', level: 163, boss: '闇黑龍王', availability: [true, true, true, false, true, true, true] },
+            { id: '2', name: '金冬甜不甜', job: '黑騎', level: 176, boss: '闇黑龍王', availability: [false, true, true, true, false, true, true] },
+            { id: '3', name: 'Ishtar', job: '箭神', level: 158, boss: '闇黑龍王', availability: [true, true, true, true, true, true, true] },
+            { id: '4', name: '在你臉上射一發', job: '神射', level: 161, boss: '闇黑龍王', availability: [true, true, true, true, true, true, true] },
+            { id: '5', name: 'ITZY的狗狗', job: '神射', level: 150, boss: '闇黑龍王', availability: [true, true, true, false, false, true, false] },
+            { id: '6', name: '肩膀長小狗', job: '刀賊', level: 165, boss: '闇黑龍王', availability: [true, true, true, true, true, true, true] },
+            { id: '7', name: '阿Cho霸', job: '拳霸', level: 163, boss: '闇黑龍王', availability: [true, true, true, true, true, true, true] },
+            { id: '8', name: '13', job: '火毒', level: 172, boss: '闇黑龍王', availability: [true, true, true, false, true, true, true] }
+          ],
+          nextWeek: [
+            { id: '1', name: 'Haewonderful', job: '英雄', level: 163, boss: '闇黑龍王', availability: [true, true, false, false, true, true, true] },
+            { id: '2', name: '金冬甜不甜', job: '黑騎', level: 176, boss: '拉圖斯', availability: [true, true, true, true, false, false, true] }
+          ]
         };
 
-        // 點擊切換當天出席
+        const savedData = localStorage.getItem('bossraid_hub_data');
+        const db = ref(savedData ? JSON.parse(savedData) : initialData);
+
+        // 資料變動自動儲存至 LocalStorage
+        watch(db, (val) => {
+          localStorage.setItem('bossraid_hub_data', JSON.stringify(val));
+        }, { deep: true });
+
+        const currentList = computed(() => db.value[currentWeekKey.value] || []);
+
+        // 打開新增彈窗
+        const openAddModal = () => {
+          isEditMode.value = false;
+          form.value = { name: '', job: '', level: 160 };
+          showModal.value = true;
+        };
+
+        // 打開編輯彈窗
+        const openEditModal = (item) => {
+          isEditMode.value = true;
+          editTargetId.value = item.id;
+          form.value = { name: item.name, job: item.job, level: item.level };
+          showModal.value = true;
+        };
+
+        // 儲存角色（新增或編輯）
+        const saveMember = () => {
+          if (!form.value.name.trim() || !form.value.job.trim()) {
+            alert('請填寫完整的角色 ID 與職業！');
+            return;
+          }
+
+          if (isEditMode.value) {
+            // 編輯所有週次中該 ID 的角色資料
+            ['thisWeek', 'nextWeek'].forEach(wk => {
+              const target = db.value[wk].find(m => m.id === editTargetId.value);
+              if (target) {
+                target.name = form.value.name.trim();
+                target.job = form.value.job.trim();
+                target.level = form.value.level || 150;
+              }
+            });
+            alert('角色資訊已修改！');
+          } else {
+            // 新增角色（雙週皆建立）
+            const newId = Date.now().toString();
+            const newMemberTemplate = {
+              id: newId,
+              name: form.value.name.trim(),
+              job: form.value.job.trim(),
+              level: form.value.level || 150,
+              boss: '闇黑龍王',
+              availability: [true, true, true, true, true, true, true]
+            };
+            db.value.thisWeek.unshift({ ...newMemberTemplate });
+            db.value.nextWeek.unshift({ ...newMemberTemplate });
+            selectedUser.value = newId;
+            alert('新角色登記成功！');
+          }
+          showModal.value = false;
+        };
+
+        // 刪除角色
+        const deleteMember = (id) => {
+          if (confirm('確定要刪除這名角色嗎？')) {
+            db.value.thisWeek = db.value.thisWeek.filter(m => m.id !== id);
+            db.value.nextWeek = db.value.nextWeek.filter(m => m.id !== id);
+            if (selectedUser.value === id) selectedUser.value = '';
+          }
+        };
+
+        // 清空所有範例名單
+        const clearAllDefault = () => {
+          if (confirm('確定要一鍵清空名單嗎？清空後即可從零開始登記你們公會的專屬成員！')) {
+            db.value.thisWeek = [];
+            db.value.nextWeek = [];
+            selectedUser.value = '';
+          }
+        };
+
+        // 切換出勤打勾
         const toggleDay = (item, dayIdx) => {
           item.availability[dayIdx] = !item.availability[dayIdx];
         };
 
+        // 報名副本切換
         const toggleBoss = (bossName) => {
           const idx = selectedBosses.value.indexOf(bossName);
           if (idx > -1) {
@@ -329,17 +442,19 @@
           }
         };
 
+        // 提交本週/下週報名
         const submitSignup = () => {
-          const target = members.value.find(m => m.name === selectedUser.value);
+          const target = currentList.value.find(m => m.id === selectedUser.value);
           if (target) {
             target.boss = selectedBosses.value.join(' + ');
-            alert(`已更新【${target.name}】的每週報名為：${target.boss}`);
+            alert(`已儲存【${target.name}】在「${currentWeekKey.value === 'thisWeek' ? '本週' : '下週'}」的副本報名：${target.boss}`);
             currentTab.value = 'list';
           }
         };
 
+        // 名單篩選
         const filteredList = computed(() => {
-          return members.value.filter(item => {
+          return currentList.value.filter(item => {
             const matchBoss = filterBoss.value === 'all' || (item.boss && item.boss.includes(filterBoss.value));
             const kw = searchKeyword.value.trim().toLowerCase();
             const matchKw = !kw || item.name.toLowerCase().includes(kw) || item.job.toLowerCase().includes(kw);
@@ -347,24 +462,27 @@
           });
         });
 
+        // 複製 AI 提示詞
         const copyAIPrompt = () => {
+          const weekLabel = currentWeekKey.value === 'thisWeek' ? '本週' : '下週';
           const lines = filteredList.value.map(m => {
-            const days = weekDays.filter((_, i) => m.availability[i]).map(d => `週${d.label}`).join(',');
+            const days = activeWeekDays.value.filter((_, i) => m.availability[i]).map(d => `週${d.label}`).join(',');
             return `- ${m.name} (${m.job} Lv.${m.level}) 副本:${m.boss} 可出勤:[${days}]`;
           }).join('\n');
 
-          const promptText = `你是一位資深的公會組隊分析師，請依照以下隊員的名單、職業、等級與可出勤時間，進行最佳 6 人出團分隊建議：\n\n${lines}\n\n請列出建議的隊伍名單與安排在哪一天出團。`;
+          const promptText = `你是一位資深的公會組隊分析師，請依照【${weekLabel}】隊員的名單、職業配置、等級與可出勤時間，進行最佳 6 人出團分隊建議：\n\n${lines}\n\n請列出最佳隊伍名單與安排在哪一天出團。`;
 
           navigator.clipboard.writeText(promptText).then(() => {
-            alert('已成功複製 AI 分隊提示詞！直接貼給 AI 即可產出排班分隊。');
+            alert(`已複製【${weekLabel}】的 AI 分隊提示詞！直接貼給 AI 即可產出最佳排班組合。`);
           });
         };
 
         return {
-          currentTab, showAddModal, selectedUser, selectedBosses,
-          bosses, weekDays, members, filterBoss, searchKeyword,
-          newForm, filteredList, handleAddMember, toggleDay,
-          toggleBoss, submitSignup, copyAIPrompt
+          currentTab, currentWeekKey, showModal, isEditMode,
+          selectedUser, selectedBosses, bosses, activeWeekDays,
+          currentList, filterBoss, searchKeyword, form, filteredList,
+          openAddModal, openEditModal, saveMember, deleteMember,
+          clearAllDefault, toggleDay, toggleBoss, submitSignup, copyAIPrompt
         };
       }
     }).mount('#app');

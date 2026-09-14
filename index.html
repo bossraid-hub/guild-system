@@ -56,7 +56,7 @@
               {{ syncStatus.text }}
             </span>
           </div>
-          <p class="text-[11px] text-slate-400">組隊・刷王・動態週期出勤統計</p>
+          <p class="text-[11px] text-slate-400">組隊・刷王・動態週期出勤統計（每週二 00:00 重置）</p>
         </div>
       </div>
 
@@ -92,20 +92,42 @@
           <h2 class="text-base font-bold text-white flex items-center gap-2">
             <i class="fa-regular fa-calendar-plus text-ph-orange"></i> 每週快速報名
           </h2>
-          <p class="text-xs text-slate-400 mt-1">選定週次後儲存，資料只會登記在該週次名單中</p>
+          <p class="text-xs text-slate-400 mt-1">選定週次後儲存，每週二自動將下週資料輪替為當週</p>
         </div>
         <button @click="openAddModal" class="text-xs text-ph-orange hover:underline font-bold">+ 登記新角色</button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 選擇角色與刪除角色按鈕 -->
         <div>
-          <label class="block text-xs font-bold text-slate-300 mb-1.5">選擇角色</label>
-          <select v-model="selectedUser" @change="onUserOrWeekChange" class="w-full bg-ph-surface border border-ph-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-ph-orange">
-            <option value="" disabled>請選擇您的角色...</option>
-            <option v-for="u in membersList" :key="u.id" :value="u.id">{{ u.name }} [{{ u.job }} Lv.{{ u.level }}]</option>
-          </select>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="text-xs font-bold text-slate-300">選擇角色</label>
+            <button 
+              v-if="selectedUser" 
+              @click="deletePermanentMember(selectedUser)"
+              class="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1 transition font-bold"
+              title="永久刪除此角色"
+            >
+              <i class="fa-solid fa-trash"></i> 永久註銷此角色
+            </button>
+          </div>
+          <div class="flex gap-2 items-center">
+            <select v-model="selectedUser" @change="onUserOrWeekChange" class="flex-1 bg-ph-surface border border-ph-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-ph-orange">
+              <option value="" disabled>請選擇您的角色...</option>
+              <option v-for="u in membersList" :key="u.id" :value="u.id">{{ u.name }} [{{ u.job }} Lv.{{ u.level }}]</option>
+            </select>
+            <button 
+              @click="deletePermanentMember(selectedUser)" 
+              :disabled="!selectedUser"
+              title="刪除所選角色"
+              class="h-[42px] px-3.5 bg-red-950/40 hover:bg-red-900/60 disabled:opacity-30 disabled:cursor-not-allowed border border-red-800 text-red-300 rounded-xl flex items-center justify-center transition"
+            >
+              <i class="fa-solid fa-trash text-sm"></i>
+            </button>
+          </div>
         </div>
 
+        <!-- 選擇週次 -->
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">選擇欲報名的週次</label>
           <div class="flex gap-2">
@@ -127,6 +149,7 @@
         </div>
       </div>
 
+      <!-- 副本選擇 -->
       <div>
         <div class="flex justify-between items-center mb-2">
           <label class="text-xs font-bold text-slate-300">
@@ -172,7 +195,7 @@
               <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">下週名單</button>
             </div>
           </div>
-          <p class="text-xs text-slate-400 mt-1">目前檢視：<span class="text-ph-orange font-bold">{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}</span>（點方塊切換出勤，各自獨立保存）</p>
+          <p class="text-xs text-slate-400 mt-1">目前檢視：<span class="text-ph-orange font-bold">{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}</span>（每週二自動結算輪替）</p>
         </div>
       </div>
 
@@ -247,7 +270,7 @@
                   <button @click="openEditModal(item)" title="編輯此角色" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-ph-border text-sky-400 border border-ph-border flex items-center justify-center transition">
                     <i class="fa-solid fa-pen text-[11px]"></i>
                   </button>
-                  <button @click="deleteFromCurrentWeek(item.memberId)" title="自本週移除" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-red-900/40 text-red-400 border border-ph-border hover:border-red-600 flex items-center justify-center transition">
+                  <button @click="deleteFromCurrentWeek(item.memberId)" title="自當前週名單移除" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-red-900/40 text-red-400 border border-ph-border hover:border-red-600 flex items-center justify-center transition">
                     <i class="fa-solid fa-trash text-[11px]"></i>
                   </button>
                 </div>
@@ -321,7 +344,7 @@
     createApp({
       setup() {
         const currentTab = ref('signup');
-        const currentWeekKey = ref('thisWeek'); // 'thisWeek' 或 'nextWeek'
+        const currentWeekKey = ref('thisWeek');
         const showModal = ref(false);
         const isEditMode = ref(false);
         const editTargetId = ref(null);
@@ -346,7 +369,6 @@
           { id: 'horntail', name: '闇黑龍王', icon: '🐉' }
         ]);
 
-        // 動態推算週二為首日的週期
         const getTuesdayCycle = (offsetWeeks = 0) => {
           const now = new Date();
           const day = now.getDay();
@@ -384,7 +406,6 @@
           return currentWeekKey.value === 'thisWeek' ? thisWeekDays : nextWeekDays;
         });
 
-        // 核心資料庫模型：members (角色資料) + thisWeek / nextWeek (獨立報名記錄)
         const db = ref({
           cycleStart: thisWeekDays[0].fullDate,
           members: {},
@@ -408,36 +429,35 @@
 
           dbRef.on('value', (snapshot) => {
             const val = snapshot.val();
+            const currentExpectedCycle = thisWeekDays[0].fullDate;
+
             if (val) {
-              // 跨週自動將下週輪替為本週
-              if (val.cycleStart && val.cycleStart !== thisWeekDays[0].fullDate) {
+              if (val.cycleStart && val.cycleStart !== currentExpectedCycle) {
                 val.thisWeek = val.nextWeek || {};
                 val.nextWeek = {};
-                val.cycleStart = thisWeekDays[0].fullDate;
+                val.cycleStart = currentExpectedCycle;
                 db.value = val;
                 syncToCloud();
               } else {
                 db.value = {
-                  cycleStart: val.cycleStart || thisWeekDays[0].fullDate,
+                  cycleStart: val.cycleStart || currentExpectedCycle,
                   members: val.members || {},
                   thisWeek: val.thisWeek || {},
                   nextWeek: val.nextWeek || {}
                 };
               }
+            } else {
+              syncToCloud();
             }
             syncStatus.value = { text: '雲端即時連線', color: 'text-emerald-400', bg: 'bg-emerald-500' };
           }, (err) => {
             console.error('Firebase read error:', err);
-            syncStatus.value = { text: '權限被擋', color: 'text-red-400', bg: 'bg-red-500' };
+            syncStatus.value = { text: '權限受阻', color: 'text-red-400', bg: 'bg-red-500' };
           });
         });
 
-        // 公會所有登記的角色名單
-        const membersList = computed(() => {
-          return Object.values(db.value.members || {});
-        });
+        const membersList = computed(() => Object.values(db.value.members || {}));
 
-        // 當前週次已報名的名單（包含角色資料 + 出勤狀況）
         const currentList = computed(() => {
           const weekData = db.value[currentWeekKey.value] || {};
           return Object.keys(weekData).map(mId => {
@@ -454,13 +474,11 @@
           });
         });
 
-        // 切換報名週次
         const setSignupWeek = (wkKey) => {
           currentWeekKey.value = wkKey;
           onUserOrWeekChange();
         };
 
-        // 當使用者切換角色或週次時，自動帶出該週「是否已經報過名」
         const onUserOrWeekChange = () => {
           if (!selectedUser.value) return;
           const weekData = db.value[currentWeekKey.value] || {};
@@ -485,7 +503,6 @@
           showModal.value = true;
         };
 
-        // 儲存角色（永久存在 members 庫中）
         const saveMember = () => {
           if (!form.value.name.trim() || !form.value.job.trim()) {
             alert('請完整填寫 ID 與職業！');
@@ -509,16 +526,33 @@
               level: form.value.level || 150
             };
             selectedUser.value = newId;
-            alert('角色登記完成！現在可直接在下方選週次進行報名。');
+            alert('角色登記完成！');
           }
           syncToCloud();
           showModal.value = false;
         };
 
-        // 點擊垃圾桶：僅自「當前週次名單」移除該名成員的報名（不刪除成員帳號）
+        // 永久刪除該角色（徹底自成員庫與雙週名單移除）
+        const deletePermanentMember = (memberId) => {
+          if (!memberId || !db.value.members[memberId]) return;
+          const targetName = db.value.members[memberId].name;
+          if (confirm(`⚠️ 警告：確定要將【${targetName}】永久刪除嗎？\n此動作會將該角色自選單以及所有週次的報名中徹底清除！`)) {
+            // 自成員庫刪除
+            delete db.value.members[memberId];
+            // 自本週與下週名單刪除
+            if (db.value.thisWeek && db.value.thisWeek[memberId]) delete db.value.thisWeek[memberId];
+            if (db.value.nextWeek && db.value.nextWeek[memberId]) delete db.value.nextWeek[memberId];
+            
+            selectedUser.value = '';
+            syncToCloud();
+            alert(`已永久註銷角色【${targetName}】！`);
+          }
+        };
+
+        // 僅自當前週名單移除
         const deleteFromCurrentWeek = (memberId) => {
           const wkText = currentWeekKey.value === 'thisWeek' ? '本週' : '下週';
-          if (confirm(`確定要將該角色從【${wkText}名單】移除嗎？`)) {
+          if (confirm(`確定要將該角色從【${wkText}名單】移除嗎？（角色依然保留在選單中）`)) {
             if (db.value[currentWeekKey.value]) {
               delete db.value[currentWeekKey.value][memberId];
               syncToCloud();
@@ -526,7 +560,6 @@
           }
         };
 
-        // 出席時間打勾切換（只變更當週）
         const toggleDay = (item, dayIdx) => {
           const weekData = db.value[currentWeekKey.value];
           if (weekData && weekData[item.memberId]) {
@@ -548,7 +581,6 @@
           }
         };
 
-        // 提交快速報名：只寫入選取的 currentWeekKey
         const submitSignup = () => {
           if (!selectedUser.value) return;
           const wkKey = currentWeekKey.value;
@@ -584,7 +616,7 @@
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           membersList, currentList, filterBoss, searchKeyword, form, filteredList,
           setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
-          saveMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
+          saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
         };
       }
     }).mount('#app');

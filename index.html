@@ -24,7 +24,11 @@
       }
     }
   </script>
+  <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Firebase SDK (Compat 版本，支援免打包直接 CDN 運行) -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-ph-black text-slate-200 min-h-screen p-3 md:p-6 font-sans select-none">
@@ -41,6 +45,11 @@
           <div class="flex items-center space-x-2">
             <span class="text-xs bg-ph-surface text-ph-orange border border-ph-orange/30 px-2 py-0.5 rounded font-mono font-bold">
               {{ currentWeekKey === 'thisWeek' ? `本週 ${weekRangeTexts.thisWeek}` : `下週 ${weekRangeTexts.nextWeek}` }}
+            </span>
+            <!-- 連線狀態指示燈 -->
+            <span class="text-[10px] flex items-center gap-1 font-mono" :class="isSynced ? 'text-emerald-400' : 'text-amber-400'">
+              <span class="w-2 h-2 rounded-full animate-pulse" :class="isSynced ? 'bg-emerald-500' : 'bg-amber-500'"></span>
+              {{ isSynced ? '雲端即時連線' : '同步中...' }}
             </span>
           </div>
           <p class="text-[11px] text-slate-400">組隊・刷王・動態週期出勤統計</p>
@@ -93,7 +102,6 @@
           </select>
         </div>
 
-        <!-- 動態週次按鈕（週二為始） -->
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">選擇週次 (以週二為首日)</label>
           <div class="flex gap-2">
@@ -115,7 +123,6 @@
         </div>
       </div>
 
-      <!-- 副本選擇 -->
       <div>
         <div class="flex justify-between items-center mb-2">
           <label class="text-xs font-bold text-slate-300">
@@ -156,16 +163,14 @@
               <i class="fa-solid fa-list-ol text-ph-orange"></i> 報名名單
             </h2>
             <span class="text-xs text-black bg-ph-orange font-black px-2 py-0.5 rounded-full">({{ filteredList.length }} 人)</span>
-            <!-- 週次切換按鈕 -->
             <div class="inline-flex bg-ph-surface rounded-lg p-0.5 border border-ph-border ml-2">
               <button @click="currentWeekKey = 'thisWeek'" :class="currentWeekKey === 'thisWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2 py-0.5 text-[10px] rounded transition">本週</button>
               <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2 py-0.5 text-[10px] rounded transition">下週</button>
             </div>
           </div>
-          <p class="text-xs text-slate-400 mt-1">點擊打勾方塊切換出勤；後方「備註」可直接輸入打王具體時段</p>
+          <p class="text-xs text-slate-400 mt-1">點擊打勾方塊切換出勤；後方「備註」可直接輸入打王具體時段（全員雲端即時同步）</p>
         </div>
 
-        <!-- 右上方按鈕區：已完全移除複製 AI 詞按鈕 -->
         <div>
           <button @click="clearAllDefault" class="text-xs bg-red-950/40 hover:bg-red-900/60 border border-red-800 text-red-300 px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-bold transition shadow">
             <i class="fa-regular fa-trash-can"></i> 清空名單
@@ -193,12 +198,10 @@
             <tr class="border-b border-ph-border text-[11px] text-slate-400">
               <th class="py-3 px-3 w-44">成員資訊</th>
               <th class="py-3 px-3 w-32">報名副本</th>
-              <!-- 動態週二至隔週一日期 -->
               <th v-for="day in activeDays" :key="day.fullDate" class="py-3 px-2 text-center">
                 <div class="font-bold text-white">週{{ day.label }}</div>
                 <div class="text-[10px] text-slate-500 font-mono">{{ day.monthDay }}</div>
               </th>
-              <!-- 時段備註欄位 -->
               <th class="py-3 px-3 w-48 text-ph-orange font-bold">可出勤時段備註</th>
               <th class="py-3 px-3 text-center w-24">操作</th>
             </tr>
@@ -233,10 +236,11 @@
                   <span v-else>•</span>
                 </button>
               </td>
-              <!-- 時段備註輸入框 -->
+              <!-- 時段備註輸入框 (輸入完失焦自動同步) -->
               <td class="py-3 px-2">
                 <input 
                   v-model="item.note" 
+                  @change="syncToCloud"
                   type="text" 
                   placeholder="例：週三四21點後、週末全天" 
                   class="w-full bg-ph-surface border border-ph-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-ph-orange"
@@ -299,7 +303,25 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, watch } = Vue;
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    // === 初始化 Firebase Realtime Database ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHcLAW64sSuz_ZzTRWTgR-GsghnldhiAI",
+      authDomain: "bossraid-hub.firebaseapp.com",
+      databaseURL: "https://bossraid-hub-default-rtdb.firebaseio.com",
+      projectId: "bossraid-hub",
+      storageBucket: "bossraid-hub.firebasestorage.app",
+      messagingSenderId: "561965613969",
+      appId: "1:561965613969:web:2379999ac7c0524e5d9030",
+      measurementId: "G-DQ1CB3646K"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const rtdb = firebase.database();
+    const dbRef = rtdb.ref('raid_data');
 
     createApp({
       setup() {
@@ -308,6 +330,7 @@
         const showModal = ref(false);
         const isEditMode = ref(false);
         const editTargetId = ref(null);
+        const isSynced = ref(false);
 
         const selectedUser = ref('');
         const selectedBosses = ref(['闇黑龍王']);
@@ -323,7 +346,7 @@
           { id: 'horntail', name: '闇黑龍王', icon: '🐉' }
         ]);
 
-        // === 動態週期演算法：以週二為每週第一天 ===
+        // === 動態週期演算法：以週二為首日 ===
         const getTuesdayCycle = (offsetWeeks = 0) => {
           const now = new Date();
           const day = now.getDay();
@@ -361,27 +384,44 @@
           return currentWeekKey.value === 'thisWeek' ? thisWeekDays : nextWeekDays;
         });
 
-        // 預設資料結構
-        const initialData = {
+        // 雲端資料結構模型
+        const db = ref({
           cycleStart: thisWeekDays[0].fullDate,
           thisWeek: [],
           nextWeek: []
+        });
+
+        // 一鍵寫入雲端函式
+        const syncToCloud = () => {
+          dbRef.set(JSON.parse(JSON.stringify(db.value)));
         };
 
-        const savedData = localStorage.getItem('bossraid_hub_v2');
-        let parsed = savedData ? JSON.parse(savedData) : initialData;
-
-        if (parsed.cycleStart && parsed.cycleStart !== thisWeekDays[0].fullDate) {
-          parsed.thisWeek = parsed.nextWeek || [];
-          parsed.nextWeek = [];
-          parsed.cycleStart = thisWeekDays[0].fullDate;
-        }
-
-        const db = ref(parsed);
-
-        watch(db, (val) => {
-          localStorage.setItem('bossraid_hub_v2', JSON.stringify(val));
-        }, { deep: true });
+        // 監聽 Firebase 雲端變動（多人即時連線同步）
+        onMounted(() => {
+          dbRef.on('value', (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+              // 跨週自動遞移
+              if (val.cycleStart && val.cycleStart !== thisWeekDays[0].fullDate) {
+                val.thisWeek = val.nextWeek || [];
+                val.nextWeek = [];
+                val.cycleStart = thisWeekDays[0].fullDate;
+                db.value = val;
+                syncToCloud();
+              } else {
+                db.value = {
+                  cycleStart: val.cycleStart || thisWeekDays[0].fullDate,
+                  thisWeek: val.thisWeek || [],
+                  nextWeek: val.nextWeek || []
+                };
+              }
+            } else {
+              // 初次建立
+              syncToCloud();
+            }
+            isSynced.value = true;
+          });
+        });
 
         const currentList = computed(() => db.value[currentWeekKey.value] || []);
 
@@ -414,7 +454,8 @@
                 target.note = form.value.note.trim();
               }
             });
-            alert('角色資料已修改！');
+            syncToCloud();
+            alert('角色資料已修改並同步！');
           } else {
             const newId = Date.now().toString();
             const newMember = {
@@ -426,32 +467,38 @@
               note: form.value.note.trim(),
               availability: [true, true, true, true, true, true, true]
             };
+            if (!db.value.thisWeek) db.value.thisWeek = [];
+            if (!db.value.nextWeek) db.value.nextWeek = [];
             db.value.thisWeek.unshift({ ...newMember });
             db.value.nextWeek.unshift({ ...newMember });
             selectedUser.value = newId;
-            alert('新角色登記完成！');
+            syncToCloud();
+            alert('新角色登記完成並同步到雲端！');
           }
           showModal.value = false;
         };
 
         const deleteMember = (id) => {
-          if (confirm('確定刪除這名成員嗎？')) {
-            db.value.thisWeek = db.value.thisWeek.filter(m => m.id !== id);
-            db.value.nextWeek = db.value.nextWeek.filter(m => m.id !== id);
+          if (confirm('確定刪除這名成員嗎？（全員將同步刪除）')) {
+            db.value.thisWeek = (db.value.thisWeek || []).filter(m => m.id !== id);
+            db.value.nextWeek = (db.value.nextWeek || []).filter(m => m.id !== id);
             if (selectedUser.value === id) selectedUser.value = '';
+            syncToCloud();
           }
         };
 
         const clearAllDefault = () => {
-          if (confirm('確定清空所有成員名單嗎？')) {
+          if (confirm('⚠️ 警告：這將會清空雲端上所有人的名單！確定要清空嗎？')) {
             db.value.thisWeek = [];
             db.value.nextWeek = [];
             selectedUser.value = '';
+            syncToCloud();
           }
         };
 
         const toggleDay = (item, dayIdx) => {
           item.availability[dayIdx] = !item.availability[dayIdx];
+          syncToCloud();
         };
 
         const toggleBoss = (bossName) => {
@@ -471,7 +518,8 @@
           const target = currentList.value.find(m => m.id === selectedUser.value);
           if (target) {
             target.boss = selectedBosses.value.join(' + ');
-            alert(`已儲存【${target.name}】的每週報名：${target.boss}`);
+            syncToCloud();
+            alert(`已更新【${target.name}】的每週報名：${target.boss}（全員已同步）`);
             currentTab.value = 'list';
           }
         };
@@ -489,11 +537,11 @@
         });
 
         return {
-          currentTab, currentWeekKey, showModal, isEditMode,
+          currentTab, currentWeekKey, showModal, isEditMode, isSynced,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           currentList, filterBoss, searchKeyword, form, filteredList,
           openAddModal, openEditModal, saveMember, deleteMember,
-          clearAllDefault, toggleDay, toggleBoss, submitSignup
+          clearAllDefault, toggleDay, toggleBoss, submitSignup, syncToCloud
         };
       }
     }).mount('#app');

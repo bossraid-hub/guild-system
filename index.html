@@ -169,9 +169,6 @@
           <button @click="clearAllDefault" class="text-xs bg-red-950/40 hover:bg-red-900/60 border border-red-800 text-red-300 px-3 py-2 rounded-xl flex items-center gap-1 font-bold transition">
             <i class="fa-regular fa-trash-can"></i> 清空名單
           </button>
-          <button @click="copyAIPrompt" class="text-xs bg-ph-surface hover:bg-ph-border border border-ph-orange/50 text-ph-orange px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-black transition shadow">
-            <i class="fa-solid fa-robot"></i> 複製 AI 分隊詞
-          </button>
         </div>
       </div>
 
@@ -200,7 +197,7 @@
                 <div class="font-bold text-white">週{{ day.label }}</div>
                 <div class="text-[10px] text-slate-500 font-mono">{{ day.monthDay }}</div>
               </th>
-              <!-- 新增：時段備註欄位 -->
+              <!-- 時段備註欄位 -->
               <th class="py-3 px-3 w-48 text-ph-orange font-bold">可出勤時段備註</th>
               <th class="py-3 px-3 text-center w-24">操作</th>
             </tr>
@@ -329,7 +326,6 @@
         const getTuesdayCycle = (offsetWeeks = 0) => {
           const now = new Date();
           const day = now.getDay(); // 0(日), 1(一), 2(二), ..., 6(六)
-          // 計算距當前週期「週二」的天數差
           const diffToTuesday = (day >= 2 ? day - 2 : day + 5);
           
           const tuesday = new Date(now);
@@ -364,27 +360,17 @@
           return currentWeekKey.value === 'thisWeek' ? thisWeekDays : nextWeekDays;
         });
 
-        // 預設資料（含時段備註）
+        // 預設資料結構
         const initialData = {
           cycleStart: thisWeekDays[0].fullDate,
-          thisWeek: [
-            { id: '1', name: 'Haewonderful', job: '英雄', level: 163, boss: '闇黑龍王', note: '21:00後皆可', availability: [true, true, true, false, true, true, true] },
-            { id: '2', name: '金冬甜不甜', job: '黑騎', level: 176, boss: '闇黑龍王', note: '週三四晚上不行，其他可', availability: [false, true, true, true, false, true, true] },
-            { id: '3', name: 'Ishtar', job: '箭神', level: 158, boss: '闇黑龍王', note: '全天可配合', availability: [true, true, true, true, true, true, true] },
-            { id: '4', name: '在你臉上射一發', job: '神射', level: 161, boss: '闇黑龍王', note: '晚上22點固定在', availability: [true, true, true, true, true, true, true] },
-            { id: '5', name: 'ITZY的狗狗', job: '神射', level: 150, boss: '闇黑龍王', note: '平日20:30後', availability: [true, true, true, false, false, true, false] },
-            { id: '6', name: '肩膀長小狗', job: '刀賊', level: 165, boss: '闇黑龍王', note: '隨傳隨到', availability: [true, true, true, true, true, true, true] }
-          ],
-          nextWeek: [
-            { id: '1', name: 'Haewonderful', job: '英雄', level: 163, boss: '闇黑龍王', note: '下週平日晚上可', availability: [true, true, false, false, true, true, true] },
-            { id: '2', name: '金冬甜不甜', job: '黑騎', level: 176, boss: '拉圖斯', note: '週末全天', availability: [true, true, true, true, false, false, true] }
-          ]
+          thisWeek: [],
+          nextWeek: []
         };
 
         const savedData = localStorage.getItem('bossraid_hub_v2');
         let parsed = savedData ? JSON.parse(savedData) : initialData;
 
-        // 當跨入新的週二週期時，自動將下週資料轉為本週
+        // 當跨入新的週二週期時，自動滾動
         if (parsed.cycleStart && parsed.cycleStart !== thisWeekDays[0].fullDate) {
           parsed.thisWeek = parsed.nextWeek || [];
           parsed.nextWeek = [];
@@ -502,28 +488,12 @@
           });
         });
 
-        // 複製 AI 提示詞（自動彙整每日勾選與時段備註）
-        const copyAIPrompt = () => {
-          const weekLabel = currentWeekKey.value === 'thisWeek' ? `本週 (${weekRangeTexts.thisWeek})` : `下週 (${weekRangeTexts.nextWeek})`;
-          const lines = filteredList.value.map(m => {
-            const days = activeDays.value.filter((_, i) => m.availability[i]).map(d => `週${d.label}(${d.monthDay})`).join(',');
-            const noteText = m.note ? ` | 備註時段:[${m.note}]` : '';
-            return `- ${m.name} (${m.job} Lv.${m.level}) 副本:${m.boss} 可出勤:[${days}]${noteText}`;
-          }).join('\n');
-
-          const promptText = `你是一位資深的公會組隊分析師，請依照【${weekLabel}】隊員的名單、職業、等級、可出勤日期與特定備註時段，進行最佳 6 人出團分隊建議（需確保火力/輔助平衡與時段不衝突）：\n\n${lines}\n\n請列出建議分隊名單、排定每隊的最佳開打日期與時間。`;
-
-          navigator.clipboard.writeText(promptText).then(() => {
-            alert(`已複製【${weekLabel}】的 AI 分隊提示詞（包含每日出席與時段備註）！`);
-          });
-        };
-
         return {
           currentTab, currentWeekKey, showModal, isEditMode,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           currentList, filterBoss, searchKeyword, form, filteredList,
           openAddModal, openEditModal, saveMember, deleteMember,
-          clearAllDefault, toggleDay, toggleBoss, submitSignup, copyAIPrompt
+          clearAllDefault, toggleDay, toggleBoss, submitSignup
         };
       }
     }).mount('#app');

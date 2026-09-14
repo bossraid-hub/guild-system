@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BOSSRAID HUB</title>
+  
+  <!-- 分頁標題與經典橘底黑字 BH Favicon -->
+  <title>BH</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23ff9000'/><text x='50%' y='70%' font-family='Impact, Arial Black, sans-serif' font-size='60' font-weight='900' text-anchor='middle' fill='%23000000'>BH</text></svg>">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -25,10 +29,10 @@
     }
   </script>
   <!-- Vue 3 -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <!-- Firebase SDK (Compat 版本，支援免打包直接 CDN 運行) -->
-  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+  <!-- Firebase 9.x Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-ph-black text-slate-200 min-h-screen p-3 md:p-6 font-sans select-none">
@@ -46,10 +50,10 @@
             <span class="text-xs bg-ph-surface text-ph-orange border border-ph-orange/30 px-2 py-0.5 rounded font-mono font-bold">
               {{ currentWeekKey === 'thisWeek' ? `本週 ${weekRangeTexts.thisWeek}` : `下週 ${weekRangeTexts.nextWeek}` }}
             </span>
-            <!-- 連線狀態指示燈 -->
-            <span class="text-[10px] flex items-center gap-1 font-mono" :class="isSynced ? 'text-emerald-400' : 'text-amber-400'">
-              <span class="w-2 h-2 rounded-full animate-pulse" :class="isSynced ? 'bg-emerald-500' : 'bg-amber-500'"></span>
-              {{ isSynced ? '雲端即時連線' : '同步中...' }}
+            <!-- 即時連線狀態燈號 -->
+            <span class="text-[10px] flex items-center gap-1 font-mono" :class="syncStatus.color">
+              <span class="w-2 h-2 rounded-full animate-pulse" :class="syncStatus.bg"></span>
+              {{ syncStatus.text }}
             </span>
           </div>
           <p class="text-[11px] text-slate-400">組隊・刷王・動態週期出勤統計</p>
@@ -168,7 +172,7 @@
               <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2 py-0.5 text-[10px] rounded transition">下週</button>
             </div>
           </div>
-          <p class="text-xs text-slate-400 mt-1">點擊打勾方塊切換出勤；後方「備註」可直接輸入打王具體時段（全員雲端即時同步）</p>
+          <p class="text-xs text-slate-400 mt-1">點擊打勾方塊切換出勤；後方「備註」直接輸入打王具體時段（全員雲端同步）</p>
         </div>
 
         <div>
@@ -191,7 +195,7 @@
         </div>
       </div>
 
-      <!-- 出勤勾選矩陣表格（含備註欄） -->
+      <!-- 出勤勾選矩陣表格 -->
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse min-w-[850px]">
           <thead>
@@ -211,7 +215,6 @@
               <td colspan="11" class="text-center py-8 text-slate-500">目前尚無名單，點擊右上角「登記新角色」即可開始！</td>
             </tr>
             <tr v-for="item in filteredList" :key="item.id" class="hover:bg-ph-surface/50 transition">
-              <!-- 成員 ID 與 職業 -->
               <td class="py-3 px-3">
                 <div class="font-bold text-white text-sm tracking-wide">{{ item.name }}</div>
                 <div class="flex gap-1.5 mt-1">
@@ -219,12 +222,10 @@
                   <span class="text-[10px] px-1.5 py-0.5 rounded bg-black/50 text-slate-400 font-mono">LV.{{ item.level }}</span>
                 </div>
               </td>
-              <!-- 副本 -->
               <td class="py-3 px-3">
                 <div class="font-bold text-slate-200">{{ item.boss || '未報名' }}</div>
                 <div class="text-[10px] text-slate-400 mt-0.5">1次 / 週</div>
               </td>
-              <!-- 每日打勾切換 -->
               <td v-for="(available, dayIdx) in item.availability" :key="dayIdx" class="py-3 px-2 text-center">
                 <button 
                   @click="toggleDay(item, dayIdx)"
@@ -236,7 +237,6 @@
                   <span v-else>•</span>
                 </button>
               </td>
-              <!-- 時段備註輸入框 (輸入完失焦自動同步) -->
               <td class="py-3 px-2">
                 <input 
                   v-model="item.note" 
@@ -246,7 +246,6 @@
                   class="w-full bg-ph-surface border border-ph-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-ph-orange"
                 >
               </td>
-              <!-- 操作 -->
               <td class="py-3 px-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
                   <button @click="openEditModal(item)" title="編輯此角色" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-ph-border text-sky-400 border border-ph-border flex items-center justify-center transition">
@@ -305,7 +304,7 @@
   <script>
     const { createApp, ref, computed, onMounted } = Vue;
 
-    // === 初始化 Firebase Realtime Database ===
+    // === Firebase Config ===
     const firebaseConfig = {
       apiKey: "AIzaSyAHcLAW64sSuz_ZzTRWTgR-GsghnldhiAI",
       authDomain: "bossraid-hub.firebaseapp.com",
@@ -313,15 +312,20 @@
       projectId: "bossraid-hub",
       storageBucket: "bossraid-hub.firebasestorage.app",
       messagingSenderId: "561965613969",
-      appId: "1:561965613969:web:2379999ac7c0524e5d9030",
-      measurementId: "G-DQ1CB3646K"
+      appId: "1:561965613969:web:2379999ac7c0524e5d9030"
     };
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+    let rtdb = null;
+    let dbRef = null;
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      rtdb = firebase.database();
+      dbRef = rtdb.ref('raid_data');
+    } catch (e) {
+      console.error('Firebase init error:', e);
     }
-    const rtdb = firebase.database();
-    const dbRef = rtdb.ref('raid_data');
 
     createApp({
       setup() {
@@ -330,7 +334,12 @@
         const showModal = ref(false);
         const isEditMode = ref(false);
         const editTargetId = ref(null);
-        const isSynced = ref(false);
+
+        const syncStatus = ref({
+          text: '連線中...',
+          color: 'text-amber-400',
+          bg: 'bg-amber-500'
+        });
 
         const selectedUser = ref('');
         const selectedBosses = ref(['闇黑龍王']);
@@ -346,7 +355,6 @@
           { id: 'horntail', name: '闇黑龍王', icon: '🐉' }
         ]);
 
-        // === 動態週期演算法：以週二為首日 ===
         const getTuesdayCycle = (offsetWeeks = 0) => {
           const now = new Date();
           const day = now.getDay();
@@ -384,24 +392,30 @@
           return currentWeekKey.value === 'thisWeek' ? thisWeekDays : nextWeekDays;
         });
 
-        // 雲端資料結構模型
         const db = ref({
           cycleStart: thisWeekDays[0].fullDate,
           thisWeek: [],
           nextWeek: []
         });
 
-        // 一鍵寫入雲端函式
         const syncToCloud = () => {
-          dbRef.set(JSON.parse(JSON.stringify(db.value)));
+          if (!dbRef) return;
+          const payload = JSON.parse(JSON.stringify(db.value));
+          dbRef.set(payload).catch((err) => {
+            console.error('Save failed:', err);
+            syncStatus.value = { text: '權限受限(需開啟Rules)', color: 'text-red-400', bg: 'bg-red-500' };
+          });
         };
 
-        // 監聽 Firebase 雲端變動（多人即時連線同步）
         onMounted(() => {
+          if (!dbRef) {
+            syncStatus.value = { text: 'Firebase未啟動', color: 'text-red-400', bg: 'bg-red-500' };
+            return;
+          }
+
           dbRef.on('value', (snapshot) => {
             const val = snapshot.val();
             if (val) {
-              // 跨週自動遞移
               if (val.cycleStart && val.cycleStart !== thisWeekDays[0].fullDate) {
                 val.thisWeek = val.nextWeek || [];
                 val.nextWeek = [];
@@ -415,11 +429,11 @@
                   nextWeek: val.nextWeek || []
                 };
               }
-            } else {
-              // 初次建立
-              syncToCloud();
             }
-            isSynced.value = true;
+            syncStatus.value = { text: '雲端即時連線', color: 'text-emerald-400', bg: 'bg-emerald-500' };
+          }, (err) => {
+            console.error('Firebase read error:', err);
+            syncStatus.value = { text: '規則被擋(請至Console改Rules)', color: 'text-red-400', bg: 'bg-red-500' };
           });
         });
 
@@ -454,8 +468,6 @@
                 target.note = form.value.note.trim();
               }
             });
-            syncToCloud();
-            alert('角色資料已修改並同步！');
           } else {
             const newId = Date.now().toString();
             const newMember = {
@@ -472,9 +484,8 @@
             db.value.thisWeek.unshift({ ...newMember });
             db.value.nextWeek.unshift({ ...newMember });
             selectedUser.value = newId;
-            syncToCloud();
-            alert('新角色登記完成並同步到雲端！');
           }
+          syncToCloud();
           showModal.value = false;
         };
 
@@ -537,7 +548,7 @@
         });
 
         return {
-          currentTab, currentWeekKey, showModal, isEditMode, isSynced,
+          currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           currentList, filterBoss, searchKeyword, form, filteredList,
           openAddModal, openEditModal, saveMember, deleteMember,

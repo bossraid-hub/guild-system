@@ -165,8 +165,9 @@
           <p class="text-xs text-slate-400 mt-1">點擊打勾方塊切換出勤；後方「備註」可直接輸入打王具體時段</p>
         </div>
 
-        <div class="flex gap-2">
-          <button @click="clearAllDefault" class="text-xs bg-red-950/40 hover:bg-red-900/60 border border-red-800 text-red-300 px-3 py-2 rounded-xl flex items-center gap-1 font-bold transition">
+        <!-- 右上方按鈕區：已完全移除複製 AI 詞按鈕 -->
+        <div>
+          <button @click="clearAllDefault" class="text-xs bg-red-950/40 hover:bg-red-900/60 border border-red-800 text-red-300 px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-bold transition shadow">
             <i class="fa-regular fa-trash-can"></i> 清空名單
           </button>
         </div>
@@ -325,7 +326,7 @@
         // === 動態週期演算法：以週二為每週第一天 ===
         const getTuesdayCycle = (offsetWeeks = 0) => {
           const now = new Date();
-          const day = now.getDay(); // 0(日), 1(一), 2(二), ..., 6(六)
+          const day = now.getDay();
           const diffToTuesday = (day >= 2 ? day - 2 : day + 5);
           
           const tuesday = new Date(now);
@@ -370,7 +371,6 @@
         const savedData = localStorage.getItem('bossraid_hub_v2');
         let parsed = savedData ? JSON.parse(savedData) : initialData;
 
-        // 當跨入新的週二週期時，自動滾動
         if (parsed.cycleStart && parsed.cycleStart !== thisWeekDays[0].fullDate) {
           parsed.thisWeek = parsed.nextWeek || [];
           parsed.nextWeek = [];

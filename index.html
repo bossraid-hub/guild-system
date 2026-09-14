@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>BH</title>
-  <!-- 1:1 復刻直角、標準字重、超清晰 32x32 Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23ff9000'/><text x='16' y='23' font-family='Arial, Helvetica, sans-serif' font-size='18' font-weight='700' text-anchor='middle' fill='%23000000'>BH</text></svg>">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,7 +42,6 @@
     <!-- 頂部導覽列 -->
     <header class="bg-ph-card border border-ph-border rounded-2xl p-4 flex justify-between items-center shadow-2xl">
       <div class="flex items-center space-x-3">
-        <!-- 正版比例風格 Logo：Bossraid hub -->
         <div class="flex items-center text-xl md:text-2xl select-none" style="font-family: 'Montserrat', Arial, sans-serif;">
           <span class="text-white font-black tracking-tight pr-1">Bossraid</span>
           <span class="bg-ph-orange text-black font-black tracking-tight px-2 py-0.5 rounded-md leading-none flex items-center">hub</span>
@@ -208,7 +206,7 @@
                 <div class="font-bold text-white">週{{ day.label }}</div>
                 <div class="text-[10px] text-slate-500 font-mono">{{ day.monthDay }}</div>
               </th>
-              <th class="py-3 px-3 w-48 text-ph-orange font-bold">可出勤時段備註</th>
+              <th class="py-3 px-3 w-56 text-ph-orange font-bold">可出勤時段備註</th>
               <th class="py-3 px-3 text-center w-24">操作</th>
             </tr>
           </thead>
@@ -239,14 +237,15 @@
                   <span v-else>•</span>
                 </button>
               </td>
+              <!-- 雙行時段備註欄 (固定高度 + 自動折行) -->
               <td class="py-3 px-2">
-                <input 
+                <textarea 
                   v-model="item.note" 
                   @change="syncToCloud"
-                  type="text" 
+                  rows="2"
                   placeholder="例：週三四21點後、週末全天" 
-                  class="w-full bg-ph-surface border border-ph-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-ph-orange"
-                >
+                  class="w-full bg-ph-surface border border-ph-border rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-ph-orange resize-none leading-tight"
+                ></textarea>
               </td>
               <td class="py-3 px-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
@@ -290,7 +289,7 @@
           </div>
           <div>
             <label class="block font-bold text-slate-300 mb-1">時段備註</label>
-            <input v-model="form.note" type="text" placeholder="例如：平日20:00後、週末全天" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
+            <textarea v-model="form.note" rows="2" placeholder="例如：平日20:00後、週末全天" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange resize-none"></textarea>
           </div>
         </div>
 

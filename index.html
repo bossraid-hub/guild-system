@@ -366,7 +366,8 @@
           { id: 'papulatus', name: '拉圖斯', icon: '⏰' },
           { id: 'chaos_zakum', name: '殘暴炎魔', icon: '🗿' },
           { id: 'papulatus_hard', name: '拉圖斯(困難)', icon: '⏳' },
-          { id: 'horntail', name: '闇黑龍王', icon: '🐉' }
+          { id: 'horntail', name: '闇黑龍王', icon: '🐉' },
+          { id: 'krexel', name: '克雷塞爾', icon: '🌳' }
         ]);
 
         const getTuesdayCycle = (offsetWeeks = 0) => {
@@ -532,14 +533,11 @@
           showModal.value = false;
         };
 
-        // 永久刪除該角色（徹底自成員庫與雙週名單移除）
         const deletePermanentMember = (memberId) => {
           if (!memberId || !db.value.members[memberId]) return;
           const targetName = db.value.members[memberId].name;
           if (confirm(`⚠️ 警告：確定要將【${targetName}】永久刪除嗎？\n此動作會將該角色自選單以及所有週次的報名中徹底清除！`)) {
-            // 自成員庫刪除
             delete db.value.members[memberId];
-            // 自本週與下週名單刪除
             if (db.value.thisWeek && db.value.thisWeek[memberId]) delete db.value.thisWeek[memberId];
             if (db.value.nextWeek && db.value.nextWeek[memberId]) delete db.value.nextWeek[memberId];
             
@@ -549,7 +547,6 @@
           }
         };
 
-        // 僅自當前週名單移除
         const deleteFromCurrentWeek = (memberId) => {
           const wkText = currentWeekKey.value === 'thisWeek' ? '本週' : '下週';
           if (confirm(`確定要將該角色從【${wkText}名單】移除嗎？（角色依然保留在選單中）`)) {

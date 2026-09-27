@@ -243,7 +243,6 @@
               </td>
               <td class="py-3 px-3">
                 <div class="font-bold text-slate-200">{{ item.boss || '未報名' }}</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">1次 / 週</div>
               </td>
               <td v-for="(available, dayIdx) in item.availability" :key="dayIdx" class="py-3 px-2 text-center">
                 <button 
@@ -479,7 +478,7 @@
         const switchTab = (tabName) => {
           currentTab.value = tabName;
           if (tabName === 'list') {
-            filterBoss.value = 'all'; // 切換至名單頁時自動顯示所有人
+            filterBoss.value = 'all';
           }
         };
 
@@ -606,7 +605,6 @@
 
         const filteredList = computed(() => {
           return currentList.value.filter(item => {
-            // 精確副本比對（支援選單「所有副本」與多選副本組合）
             let matchBoss = false;
             if (filterBoss.value === 'all') {
               matchBoss = true;

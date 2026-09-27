@@ -262,8 +262,8 @@
               </td>
               <td class="py-3 px-2">
                 <textarea 
-                  v-model="item.note" 
-                  @change="syncToCloud"
+                  :value="item.note" 
+                  @input="updateMemberNote(item.memberId, $event.target.value)"
                   rows="2"
                   placeholder="例：週三四21點後、週末全天" 
                   class="w-full bg-ph-surface border border-ph-border rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-ph-orange resize-none leading-tight"
@@ -490,6 +490,14 @@
           });
         });
 
+        const updateMemberNote = (memberId, noteValue) => {
+          const wkKey = currentWeekKey.value;
+          if (db.value[wkKey] && db.value[wkKey][memberId]) {
+            db.value[wkKey][memberId].note = noteValue;
+            syncToCloud();
+          }
+        };
+
         const switchTab = (tabName) => {
           currentTab.value = tabName;
           if (tabName === 'list') {
@@ -641,7 +649,7 @@
           currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           membersList, currentList, filterBoss, searchKeyword, form, filteredList,
-          getBossIcon, getBossArray, switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
+          getBossIcon, getBossArray, updateMemberNote, switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
           saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
         };
       }

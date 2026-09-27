@@ -70,14 +70,14 @@
     <!-- 分頁 Tab -->
     <nav class="flex space-x-2 bg-ph-card p-1.5 rounded-xl border border-ph-border text-xs">
       <button 
-        @click="currentTab = 'signup'"
+        @click="switchTab('signup')"
         :class="currentTab === 'signup' ? 'bg-ph-orange text-black font-black' : 'text-slate-400 hover:text-white'"
         class="px-4 py-2 rounded-lg transition flex items-center gap-1.5 font-bold"
       >
         <i class="fa-regular fa-calendar-check"></i> 每週報名
       </button>
       <button 
-        @click="currentTab = 'list'"
+        @click="switchTab('list')"
         :class="currentTab === 'list' ? 'bg-ph-orange text-black font-black' : 'text-slate-400 hover:text-white'"
         class="px-4 py-2 rounded-lg transition flex items-center gap-1.5 font-bold"
       >
@@ -476,6 +476,13 @@
           });
         });
 
+        const switchTab = (tabName) => {
+          currentTab.value = tabName;
+          if (tabName === 'list') {
+            filterBoss.value = 'all'; // 切換至名單頁時自動顯示所有人
+          }
+        };
+
         const setSignupWeek = (wkKey) => {
           currentWeekKey.value = wkKey;
           onUserOrWeekChange();
@@ -594,12 +601,20 @@
           syncToCloud();
           const targetMember = db.value.members[selectedUser.value];
           alert(`已成功將【${targetMember.name}】登記至【${wkKey === 'thisWeek' ? '本週' : '下週'}】名單！`);
-          currentTab.value = 'list';
+          switchTab('list');
         };
 
         const filteredList = computed(() => {
           return currentList.value.filter(item => {
-            const matchBoss = filterBoss.value === 'all' || (item.boss && item.boss.includes(filterBoss.value));
+            // 精確副本比對（支援選單「所有副本」與多選副本組合）
+            let matchBoss = false;
+            if (filterBoss.value === 'all') {
+              matchBoss = true;
+            } else if (item.boss) {
+              const userBosses = item.boss.split(' + ');
+              matchBoss = userBosses.includes(filterBoss.value);
+            }
+
             const kw = searchKeyword.value.trim().toLowerCase();
             const matchKw = !kw || 
               item.name.toLowerCase().includes(kw) || 
@@ -613,7 +628,7 @@
           currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           membersList, currentList, filterBoss, searchKeyword, form, filteredList,
-          setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
+          switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
           saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
         };
       }

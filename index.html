@@ -203,7 +203,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         <select v-model="filterBoss" class="bg-ph-surface border border-ph-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ph-orange">
           <option value="all">所有副本</option>
-          <option v-for="b in bosses" :key="b.id" :value="b.name">{{ b.name }}</option>
+          <option v-for="b in bosses" :key="b.id" :value="b.name">{{ b.icon }} {{ b.name }}</option>
         </select>
 
         <div class="relative sm:col-span-2">
@@ -218,7 +218,7 @@
           <thead>
             <tr class="border-b border-ph-border text-[11px] text-slate-400">
               <th class="py-3 px-3 w-44">成員資訊</th>
-              <th class="py-3 px-3 w-32">報名副本</th>
+              <th class="py-3 px-3 w-40">報名副本</th>
               <th v-for="day in activeDays" :key="day.fullDate" class="py-3 px-2 text-center">
                 <div class="font-bold text-white">週{{ day.label }}</div>
                 <div class="text-[10px] text-slate-500 font-mono">{{ day.monthDay }}</div>
@@ -242,7 +242,12 @@
                 </div>
               </td>
               <td class="py-3 px-3">
-                <div class="font-bold text-slate-200">{{ item.boss || '未報名' }}</div>
+                <div class="flex flex-col gap-1">
+                  <div v-for="bossName in getBossArray(item.boss)" :key="bossName" class="flex items-center gap-1.5 font-bold text-slate-200">
+                    <span class="text-base leading-none">{{ getBossIcon(bossName) }}</span>
+                    <span>{{ bossName }}</span>
+                  </div>
+                </div>
               </td>
               <td v-for="(available, dayIdx) in item.availability" :key="dayIdx" class="py-3 px-2 text-center">
                 <button 
@@ -369,6 +374,16 @@
           { id: 'krexel', name: '克雷塞爾', icon: '🌳' },
           { id: 'krexel2', name: '克雷塞爾 2', icon: '🍃' }
         ]);
+
+        const getBossIcon = (bossName) => {
+          const found = bosses.value.find(b => b.name === bossName);
+          return found ? found.icon : '⚔️';
+        };
+
+        const getBossArray = (bossString) => {
+          if (!bossString || bossString === '未報名') return ['未報名'];
+          return bossString.split(' + ');
+        };
 
         const getTuesdayCycle = (offsetWeeks = 0) => {
           const now = new Date();
@@ -626,7 +641,7 @@
           currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           membersList, currentList, filterBoss, searchKeyword, form, filteredList,
-          switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
+          getBossIcon, getBossArray, switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
           saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
         };
       }

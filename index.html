@@ -61,6 +61,9 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <button @click="forceCycleShift" title="把下週報名名單直接推進為本週" class="text-xs bg-ph-surface hover:bg-ph-border text-slate-300 font-bold px-3 py-2 rounded-xl border border-ph-border flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-arrows-rotate text-ph-orange"></i> 手動推進週次
+        </button>
         <button @click="openAddModal" class="text-xs bg-ph-orange hover:bg-ph-hover text-black font-black px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow">
           <i class="fa-solid fa-user-plus"></i> 登記新角色
         </button>
@@ -503,6 +506,16 @@
           });
         };
 
+        const forceCycleShift = () => {
+          if (confirm('確定要將【下週報名名單】直接推進為【本週報名名單】嗎？')) {
+            db.value.thisWeek = db.value.nextWeek || {};
+            db.value.nextWeek = {};
+            db.value.cycleStart = thisWeekDays[0].fullDate;
+            syncToCloud();
+            alert('已成功將下週名單推進為本週名單！');
+          }
+        };
+
         onMounted(() => {
           if (!dbRef) {
             syncStatus.value = { text: 'Firebase未啟動', color: 'text-red-400', bg: 'bg-red-500' };
@@ -514,7 +527,11 @@
             const currentExpectedCycle = thisWeekDays[0].fullDate;
 
             if (val) {
-              if (val.cycleStart && val.cycleStart !== currentExpectedCycle) {
+              const hasThisWeekData = val.thisWeek && Object.keys(val.thisWeek).length > 0;
+              const hasNextWeekData = val.nextWeek && Object.keys(val.nextWeek).length > 0;
+
+              // 自動檢查：如果跨週了，或者本週沒資料但下週有資料，自動轉移
+              if ((val.cycleStart && val.cycleStart !== currentExpectedCycle) || (!hasThisWeekData && hasNextWeekData)) {
                 db.value = {
                   cycleStart: currentExpectedCycle,
                   members: val.members || {},
@@ -590,7 +607,7 @@
           currentTab.value = tabName;
           if (tabName === 'list') {
             filterBoss.value = 'all';
-            currentWeekKey.value = 'thisWeek'; // 切換至名單時預設看本週
+            currentWeekKey.value = 'thisWeek';
           }
         };
 
@@ -738,7 +755,7 @@
           currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           membersList, currentList, filterBoss, searchKeyword, form, filteredList,
-          unregisteredThisWeek, unregisteredNextWeek, quickSelectUser,
+          unregisteredThisWeek, unregisteredNextWeek, quickSelectUser, forceCycleShift,
           getBossIcon, getBossArray, updateMemberNote, switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
           saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
         };

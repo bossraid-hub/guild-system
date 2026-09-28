@@ -561,19 +561,16 @@
           });
         });
 
-        // 計算本週未報名名單
         const unregisteredThisWeek = computed(() => {
           const registeredIds = Object.keys(db.value.thisWeek || {});
           return membersList.value.filter(m => !registeredIds.includes(m.id));
         });
 
-        // 計算下週未報名名單
         const unregisteredNextWeek = computed(() => {
           const registeredIds = Object.keys(db.value.nextWeek || {});
           return membersList.value.filter(m => !registeredIds.includes(m.id));
         });
 
-        // 快速點擊選擇未報名角色
         const quickSelectUser = (memberId, weekKey) => {
           selectedUser.value = memberId;
           currentWeekKey.value = weekKey;
@@ -593,6 +590,7 @@
           currentTab.value = tabName;
           if (tabName === 'list') {
             filterBoss.value = 'all';
+            currentWeekKey.value = 'thisWeek'; // 切換至名單時預設看本週
           }
         };
 

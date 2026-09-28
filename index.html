@@ -285,6 +285,71 @@
       </div>
     </main>
 
+    <!-- 底部：本週 / 下週 未報名角色統計欄位 -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- 本週未報名區塊 -->
+      <div class="bg-ph-card border border-ph-border rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-ph-border pb-2.5 mb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-exclamation text-amber-500"></i>
+            <h3 class="text-xs font-bold text-white">本週未報名角色 <span class="text-slate-400 font-mono">({{ unregisteredThisWeek.length }} 人)</span></h3>
+          </div>
+          <span class="text-[10px] text-slate-500 font-mono">{{ weekRangeTexts.thisWeek }}</span>
+        </div>
+
+        <div v-if="unregisteredThisWeek.length === 0" class="text-center py-4 text-xs text-emerald-400 font-bold flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-circle-check"></i> 本週全員皆已完成副本報名！
+        </div>
+
+        <div v-else class="flex flex-wrap gap-2">
+          <div 
+            v-for="m in unregisteredThisWeek" 
+            :key="m.id" 
+            @click="quickSelectUser(m.id, 'thisWeek')"
+            title="點擊快速報名本週"
+            class="bg-ph-surface border border-ph-border hover:border-ph-orange p-2 rounded-xl flex items-center justify-between gap-3 text-xs cursor-pointer transition group"
+          >
+            <div>
+              <span class="font-bold text-white group-hover:text-ph-orange transition">{{ m.name }}</span>
+              <span class="text-[10px] text-slate-400 ml-1">[{{ m.job }}]</span>
+            </div>
+            <span class="text-[10px] text-ph-orange bg-ph-orange/10 px-2 py-0.5 rounded font-bold border border-ph-orange/20">點此報名</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 下週未報名區塊 -->
+      <div class="bg-ph-card border border-ph-border rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-ph-border pb-2.5 mb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-clock text-amber-500"></i>
+            <h3 class="text-xs font-bold text-white">下週未報名角色 <span class="text-slate-400 font-mono">({{ unregisteredNextWeek.length }} 人)</span></h3>
+          </div>
+          <span class="text-[10px] text-slate-500 font-mono">{{ weekRangeTexts.nextWeek }}</span>
+        </div>
+
+        <div v-if="unregisteredNextWeek.length === 0" class="text-center py-4 text-xs text-emerald-400 font-bold flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-circle-check"></i> 下週全員皆已完成副本報名！
+        </div>
+
+        <div v-else class="flex flex-wrap gap-2">
+          <div 
+            v-for="m in unregisteredNextWeek" 
+            :key="m.id" 
+            @click="quickSelectUser(m.id, 'nextWeek')"
+            title="點擊快速報名下週"
+            class="bg-ph-surface border border-ph-border hover:border-ph-orange p-2 rounded-xl flex items-center justify-between gap-3 text-xs cursor-pointer transition group"
+          >
+            <div>
+              <span class="font-bold text-white group-hover:text-ph-orange transition">{{ m.name }}</span>
+              <span class="text-[10px] text-slate-400 ml-1">[{{ m.job }}]</span>
+            </div>
+            <span class="text-[10px] text-ph-orange bg-ph-orange/10 px-2 py-0.5 rounded font-bold border border-ph-orange/20">點此報名</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 登記 / 編輯角色彈窗 -->
     <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div class="bg-ph-card border border-ph-border rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
@@ -352,9 +417,10 @@
         const showModal = ref(false);
         const isEditMode = ref(false);
         const editTargetId = ref(null);
+        const isLoaded = ref(false);
 
         const syncStatus = ref({
-          text: '連線中...',
+          text: '載入雲端資料中...',
           color: 'text-amber-400',
           bg: 'bg-amber-500'
         });
@@ -430,7 +496,7 @@
         });
 
         const syncToCloud = () => {
-          if (!dbRef) return;
+          if (!dbRef || !isLoaded.value) return;
           const payload = JSON.parse(JSON.stringify(db.value));
           dbRef.set(payload).catch(err => {
             console.error('Firebase save error:', err);
@@ -449,10 +515,13 @@
 
             if (val) {
               if (val.cycleStart && val.cycleStart !== currentExpectedCycle) {
-                val.thisWeek = val.nextWeek || {};
-                val.nextWeek = {};
-                val.cycleStart = currentExpectedCycle;
-                db.value = val;
+                db.value = {
+                  cycleStart: currentExpectedCycle,
+                  members: val.members || {},
+                  thisWeek: val.nextWeek || {},
+                  nextWeek: {}
+                };
+                isLoaded.value = true;
                 syncToCloud();
               } else {
                 db.value = {
@@ -461,8 +530,10 @@
                   thisWeek: val.thisWeek || {},
                   nextWeek: val.nextWeek || {}
                 };
+                isLoaded.value = true;
               }
             } else {
+              isLoaded.value = true;
               syncToCloud();
             }
             syncStatus.value = { text: '雲端即時連線', color: 'text-emerald-400', bg: 'bg-emerald-500' };
@@ -489,6 +560,26 @@
             };
           });
         });
+
+        // 計算本週未報名名單
+        const unregisteredThisWeek = computed(() => {
+          const registeredIds = Object.keys(db.value.thisWeek || {});
+          return membersList.value.filter(m => !registeredIds.includes(m.id));
+        });
+
+        // 計算下週未報名名單
+        const unregisteredNextWeek = computed(() => {
+          const registeredIds = Object.keys(db.value.nextWeek || {});
+          return membersList.value.filter(m => !registeredIds.includes(m.id));
+        });
+
+        // 快速點擊選擇未報名角色
+        const quickSelectUser = (memberId, weekKey) => {
+          selectedUser.value = memberId;
+          currentWeekKey.value = weekKey;
+          currentTab.value = 'signup';
+          onUserOrWeekChange();
+        };
 
         const updateMemberNote = (memberId, noteValue) => {
           const wkKey = currentWeekKey.value;
@@ -649,6 +740,7 @@
           currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           membersList, currentList, filterBoss, searchKeyword, form, filteredList,
+          unregisteredThisWeek, unregisteredNextWeek, quickSelectUser,
           getBossIcon, getBossArray, updateMemberNote, switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
           saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
         };

@@ -192,7 +192,7 @@
             <h2 class="text-base font-bold text-white flex items-center gap-2">
               <i class="fa-solid fa-list-ol text-ph-orange"></i> 報名名單
             </h2>
-            <span class="text-xs text-black bg-ph-orange font-black px-2 py-0.5 rounded-full">({{ filteredList.length }} 人)</span>
+            <span class="text-xs text-black bg-ph-orange font-black px-2 py-0.5 rounded-full font-mono">({{ filteredList.length }} 人)</span>
             <div class="inline-flex bg-ph-surface rounded-lg p-0.5 border border-ph-border ml-2">
               <button @click="currentWeekKey = 'thisWeek'" :class="currentWeekKey === 'thisWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">本週名單</button>
               <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">下週名單</button>
@@ -527,28 +527,13 @@
             const currentExpectedCycle = thisWeekDays[0].fullDate;
 
             if (val) {
-              const hasThisWeekData = val.thisWeek && Object.keys(val.thisWeek).length > 0;
-              const hasNextWeekData = val.nextWeek && Object.keys(val.nextWeek).length > 0;
-
-              // 自動檢查：如果跨週了，或者本週沒資料但下週有資料，自動轉移
-              if ((val.cycleStart && val.cycleStart !== currentExpectedCycle) || (!hasThisWeekData && hasNextWeekData)) {
-                db.value = {
-                  cycleStart: currentExpectedCycle,
-                  members: val.members || {},
-                  thisWeek: val.nextWeek || {},
-                  nextWeek: {}
-                };
-                isLoaded.value = true;
-                syncToCloud();
-              } else {
-                db.value = {
-                  cycleStart: val.cycleStart || currentExpectedCycle,
-                  members: val.members || {},
-                  thisWeek: val.thisWeek || {},
-                  nextWeek: val.nextWeek || {}
-                };
-                isLoaded.value = true;
-              }
+              db.value = {
+                cycleStart: currentExpectedCycle,
+                members: val.members || {},
+                thisWeek: val.thisWeek || {},
+                nextWeek: val.nextWeek || {}
+              };
+              isLoaded.value = true;
             } else {
               isLoaded.value = true;
               syncToCloud();
@@ -607,7 +592,6 @@
           currentTab.value = tabName;
           if (tabName === 'list') {
             filterBoss.value = 'all';
-            currentWeekKey.value = 'thisWeek';
           }
         };
 

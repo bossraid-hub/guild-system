@@ -31,7 +31,6 @@
       }
     }
   </script>
-  <!-- 必須使用完整的 Vue 版本以確保模板正確編譯 -->
   <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -50,7 +49,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <span class="text-xs bg-ph-surface text-ph-orange border border-ph-orange/30 px-2 py-0.5 rounded font-mono font-bold">
-              {{ currentWeekKey === 'thisWeek' ? `本週 ${weekRangeTexts.thisWeek}` : `下週 ${weekRangeTexts.nextWeek}` }}
+              {{ currentWeekKey === 'thisWeek' ? ('本週 ' + weekRangeTexts.thisWeek) : ('下週 ' + weekRangeTexts.nextWeek) }}
             </span>
             <span class="text-[10px] flex items-center gap-1 font-mono" :class="syncStatus.color">
               <span class="w-2 h-2 rounded-full animate-pulse" :class="syncStatus.bg"></span>
@@ -221,4 +220,55 @@
 
         <!-- 下週未報名區塊 -->
         <div class="bg-ph-card border border-ph-border rounded-2xl p-4 shadow-xl">
-          <div class="flex items-center justify-between border-b border-ph-border
+          <div class="flex items-center justify-between border-b border-ph-border pb-2.5 mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clock text-amber-500"></i>
+              <h3 class="text-xs font-bold text-white">下週未報名角色 <span class="text-slate-400 font-mono">({{ unregisteredNextWeek.length }} 人)</span></h3>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">{{ weekRangeTexts.nextWeek }}</span>
+          </div>
+
+          <div v-if="unregisteredNextWeek.length === 0" class="text-center py-4 text-xs text-emerald-400 font-bold flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-circle-check"></i> 下週全員皆已完成副本報名！
+          </div>
+
+          <div v-else class="flex flex-wrap gap-2">
+            <div 
+              v-for="m in unregisteredNextWeek" 
+              :key="m.id" 
+              @click="quickSelectUser(m.id, 'nextWeek')"
+              title="點擊快速報名下週"
+              class="bg-ph-surface border border-ph-border hover:border-ph-orange p-2 rounded-xl flex items-center justify-between gap-3 text-xs cursor-pointer transition group"
+            >
+              <div>
+                <span class="font-bold text-white group-hover:text-ph-orange transition">{{ m.name }}</span>
+                <span class="text-[10px] text-slate-400 ml-1">[{{ m.job }}]</span>
+              </div>
+              <span class="text-[10px] text-ph-orange bg-ph-orange/10 px-2 py-0.5 rounded font-bold border border-ph-orange/20">點此報名</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 分頁 2: 報名名單與出勤狀態 -->
+    <main v-if="currentTab === 'list'" class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow-2xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-ph-border pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-list-ol text-ph-orange"></i> 報名名單
+            </h2>
+            <span class="text-xs text-black bg-ph-orange font-black px-2 py-0.5 rounded-full font-mono">({{ filteredList.length }} 人)</span>
+            <div class="inline-flex bg-ph-surface rounded-lg p-0.5 border border-ph-border ml-2">
+              <button @click="currentWeekKey = 'thisWeek'" :class="currentWeekKey === 'thisWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">本週名單</button>
+              <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">下週名單</button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">目前檢視：<span class="text-ph-orange font-bold">{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}</span>（每週二自動結算輪替）</p>
+        </div>
+      </div>
+
+      <!-- 篩選列 -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <select v-model="filterBoss" class="bg-ph-surface border border-ph-border rounded-

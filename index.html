@@ -31,7 +31,7 @@
       }
     }
   </script>
-  <!-- 建議將此檔案下載至本地 js/vue.global.js 避免 CDN 斷線 -->
+  <!-- 必須使用完整的 Vue 版本以確保模板正常編譯 -->
   <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -264,3 +264,33 @@
             <div class="inline-flex bg-ph-surface rounded-lg p-0.5 border border-ph-border ml-2">
               <button @click="currentWeekKey = 'thisWeek'" :class="currentWeekKey === 'thisWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">本週名單</button>
               <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">下週名單</button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">目前檢視：<span class="text-ph-orange font-bold">{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}</span>（每週二自動結算輪替）</p>
+        </div>
+      </div>
+
+      <!-- 副本圖示切換列（取代原先的下拉選單與搜尋列） -->
+      <div class="flex flex-wrap gap-2 pt-1 pb-1">
+        <button 
+          @click="filterBoss = 'all'"
+          :class="filterBoss === 'all' ? 'bg-ph-orange text-black font-black border-ph-orange shadow-md' : 'bg-ph-surface text-slate-400 border-ph-border hover:border-slate-500 hover:text-white'"
+          class="px-3.5 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+        >
+          <i class="fa-solid fa-layer-group text-sm"></i>
+          <span>所有副本</span>
+        </button>
+
+        <button 
+          v-for="b in bosses" :key="b.id"
+          @click="filterBoss = b.name"
+          :class="filterBoss === b.name ? 'bg-ph-orange text-black font-black border-ph-orange shadow-md' : 'bg-ph-surface text-slate-300 border-ph-border hover:border-slate-500 hover:text-white'"
+          class="px-3 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+        >
+          <span class="text-base leading-none">{{ b.icon }}</span>
+          <span class="font-bold">{{ b.name }}</span>
+        </button>
+      </div>
+
+      <!-- 出勤勾選表格 -->
+      <div class="overflow-x

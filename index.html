@@ -49,7 +49,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <span class="text-xs bg-ph-surface text-ph-orange border border-ph-orange/30 px-2 py-0.5 rounded font-mono font-bold">
-              {{ currentWeekKey === 'thisWeek' ? `本週 ${weekRangeTexts.thisWeek}` : `下週 ${weekRangeTexts.nextWeek}` }}
+              {{ currentWeekKey === 'thisWeek' ? '本週 ' + weekRangeTexts.thisWeek : '下週 ' + weekRangeTexts.nextWeek }}
             </span>
             <span class="text-[10px] flex items-center gap-1 font-mono" :class="syncStatus.color">
               <span class="w-2 h-2 rounded-full animate-pulse" :class="syncStatus.bg"></span>
@@ -90,4 +90,58 @@
 
     <!-- 分頁 1: 每週報名 -->
     <main v-if="currentTab === 'signup'" class="space-y-4">
-      <div class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow
+      <div class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow-2xl space-y-6">
+        <div class="border-b border-ph-border pb-3 flex justify-between items-center">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-regular fa-calendar-plus text-ph-orange"></i> 每週快速報名
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">選定週次後儲存，每週二自動將下週資料輪替為當週</p>
+          </div>
+          <button @click="openAddModal" class="text-xs text-ph-orange hover:underline font-bold">+ 登記新角色</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- 選擇角色與刪除角色按鈕 -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="text-xs font-bold text-slate-300">選擇角色</label>
+              <button 
+                v-if="selectedUser" 
+                @click="deletePermanentMember(selectedUser)"
+                class="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1 transition font-bold"
+                title="永久刪除此角色"
+              >
+                <i class="fa-solid fa-trash"></i> 永久註銷此角色
+              </button>
+            </div>
+            <div class="flex gap-2 items-center">
+              <select v-model="selectedUser" @change="onUserOrWeekChange" class="flex-1 bg-ph-surface border border-ph-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-ph-orange">
+                <option value="" disabled>請選擇您的角色...</option>
+                <option v-for="u in membersList" :key="u.id" :value="u.id">{{ u.name }} [{{ u.job }} Lv.{{ u.level }}]</option>
+              </select>
+              <button 
+                @click="deletePermanentMember(selectedUser)" 
+                :disabled="!selectedUser"
+                title="刪除所選角色"
+                class="h-[42px] px-3.5 bg-red-950/40 hover:bg-red-900/60 disabled:opacity-30 disabled:cursor-not-allowed border border-red-800 text-red-300 rounded-xl flex items-center justify-center transition"
+              >
+                <i class="fa-solid fa-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- 選擇週次 -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">選擇欲報名的週次</label>
+            <div class="flex gap-2">
+              <button 
+                @click="setSignupWeek('thisWeek')"
+                :class="currentWeekKey === 'thisWeek' ? 'border-ph-orange bg-ph-orange/15 text-ph-orange font-black shadow' : 'border-ph-border bg-ph-surface text-slate-400 hover:text-white'"
+                class="flex-1 py-2.5 text-xs rounded-xl border transition font-mono"
+              >
+                本週 {{ weekRangeTexts.thisWeek }}
+              </button>
+              <button 
+                @click="setSignupWeek('nextWeek')"
+                :class="currentWeekKey === 'nextWeek' ? 'border-ph-orange bg-ph-orange/15 text-ph-orange font-black shadow' : 'border-ph-border bg-ph-surface text-slate-400 hover:

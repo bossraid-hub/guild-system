@@ -229,4 +229,520 @@
             <span class="text-[10px] text-slate-500 font-mono">{{ weekRangeTexts.nextWeek }}</span>
           </div>
 
-          <div v-if="unregisteredNextWeek.length === 0" class="text-center py-4
+          <div v-if="unregisteredNextWeek.length === 0" class="text-center py-4 text-xs text-emerald-400 font-bold flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-circle-check"></i> 下週全員皆已完成副本報名！
+          </div>
+
+          <div v-else class="flex flex-wrap gap-2">
+            <div 
+              v-for="m in unregisteredNextWeek" 
+              :key="m.id" 
+              @click="quickSelectUser(m.id, 'nextWeek')"
+              title="點擊快速報名下週"
+              class="bg-ph-surface border border-ph-border hover:border-ph-orange p-2 rounded-xl flex items-center justify-between gap-3 text-xs cursor-pointer transition group"
+            >
+              <div>
+                <span class="font-bold text-white group-hover:text-ph-orange transition">{{ m.name }}</span>
+                <span class="text-[10px] text-slate-400 ml-1">[{{ m.job }}]</span>
+              </div>
+              <span class="text-[10px] text-ph-orange bg-ph-orange/10 px-2 py-0.5 rounded font-bold border border-ph-orange/20">點此報名</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 分頁 2: 報名名單與出勤狀態 -->
+    <main v-if="currentTab === 'list'" class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow-2xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-ph-border pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-list-ol text-ph-orange"></i> 報名名單
+            </h2>
+            <span class="text-xs text-black bg-ph-orange font-black px-2 py-0.5 rounded-full font-mono">({{ filteredList.length }} 人)</span>
+            <div class="inline-flex bg-ph-surface rounded-lg p-0.5 border border-ph-border ml-2">
+              <button @click="currentWeekKey = 'thisWeek'" :class="currentWeekKey === 'thisWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">本週名單</button>
+              <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">下週名單</button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">目前檢視：<span class="text-ph-orange font-bold">{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}</span>（每週二自動結算輪替）</p>
+        </div>
+      </div>
+
+      <!-- 副本圖示切換列（已取代舊的下拉選單與搜尋列） -->
+      <div class="flex flex-wrap gap-2 pt-1 pb-1">
+        <button 
+          @click="filterBoss = 'all'"
+          :class="filterBoss === 'all' ? 'bg-ph-orange text-black font-black border-ph-orange shadow-md' : 'bg-ph-surface text-slate-400 border-ph-border hover:border-slate-500 hover:text-white'"
+          class="px-3.5 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+        >
+          <i class="fa-solid fa-layer-group text-sm"></i>
+          <span>所有副本</span>
+        </button>
+
+        <button 
+          v-for="b in bosses" :key="b.id"
+          @click="filterBoss = b.name"
+          :class="filterBoss === b.name ? 'bg-ph-orange text-black font-black border-ph-orange shadow-md' : 'bg-ph-surface text-slate-300 border-ph-border hover:border-slate-500 hover:text-white'"
+          class="px-3 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+        >
+          <span class="text-base leading-none">{{ b.icon }}</span>
+          <span class="font-bold">{{ b.name }}</span>
+        </button>
+      </div>
+
+      <!-- 出勤勾選表格 -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[850px]">
+          <thead>
+            <tr class="border-b border-ph-border text-[11px] text-slate-400">
+              <th class="py-3 px-3 w-44">成員資訊</th>
+              <th class="py-3 px-3 w-40">報名副本</th>
+              <th v-for="day in activeDays" :key="day.fullDate" class="py-3 px-2 text-center">
+                <div class="font-bold text-white">週{{ day.label }}</div>
+                <div class="text-[10px] text-slate-500 font-mono">{{ day.monthDay }}</div>
+              </th>
+              <th class="py-3 px-3 w-56 text-ph-orange font-bold">可出勤時段備註</th>
+              <th class="py-3 px-3 text-center w-24">操作</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-ph-border/60 text-xs">
+            <tr v-if="filteredList.length === 0">
+              <td colspan="11" class="text-center py-8 text-slate-500">
+                【{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}】尚無符合此副本的成員報名！
+              </td>
+            </tr>
+            <tr v-for="item in filteredList" :key="item.memberId" class="hover:bg-ph-surface/50 transition">
+              <td class="py-3 px-3">
+                <div class="font-bold text-white text-sm tracking-wide">{{ item.name }}</div>
+                <div class="flex gap-1.5 mt-1">
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-ph-surface border border-ph-border text-ph-orange font-bold">{{ item.job }}</span>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-black/50 text-slate-400 font-mono">LV.{{ item.level }}</span>
+                </div>
+              </td>
+              <td class="py-3 px-3">
+                <div class="flex flex-col gap-1">
+                  <div v-for="bossName in getBossArray(item.boss)" :key="bossName" class="flex items-center gap-1.5 font-bold text-slate-200">
+                    <span class="text-base leading-none">{{ getBossIcon(bossName) }}</span>
+                    <span>{{ bossName }}</span>
+                  </div>
+                </div>
+              </td>
+              <td v-for="(available, dayIdx) in item.availability" :key="dayIdx" class="py-3 px-2 text-center">
+                <button 
+                  @click="toggleDay(item, dayIdx)"
+                  title="點擊切換出席"
+                  :class="available ? 'bg-ph-orange text-black border-ph-orange shadow-md scale-105' : 'bg-ph-surface border-ph-border text-slate-600 hover:border-slate-400'"
+                  class="w-7 h-7 rounded-lg border text-xs font-black inline-flex items-center justify-center transition"
+                >
+                  <i v-if="available" class="fa-solid fa-check"></i>
+                  <span v-else>•</span>
+                </button>
+              </td>
+              <td class="py-3 px-2">
+                <textarea 
+                  :value="item.note" 
+                  @input="updateMemberNote(item.memberId, $event.target.value)"
+                  rows="2"
+                  placeholder="例：週三四21點後、週末全天" 
+                  class="w-full bg-ph-surface border border-ph-border rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-ph-orange resize-none leading-tight"
+                ></textarea>
+              </td>
+              <td class="py-3 px-3 text-center">
+                <div class="flex items-center justify-center gap-1.5">
+                  <button @click="openEditModal(item)" title="編輯此角色" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-ph-border text-sky-400 border border-ph-border flex items-center justify-center transition">
+                    <i class="fa-solid fa-pen text-[11px]"></i>
+                  </button>
+                  <button @click="deleteFromCurrentWeek(item.memberId)" title="自當前週名單移除" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-red-900/40 text-red-400 border border-ph-border hover:border-red-600 flex items-center justify-center transition">
+                    <i class="fa-solid fa-trash text-[11px]"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- 登記 / 編輯角色彈窗 -->
+    <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-ph-card border border-ph-border rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+        <div class="flex justify-between items-center border-b border-ph-border pb-3">
+          <h3 class="font-bold text-white text-base flex items-center gap-2">
+            <span class="bg-ph-orange text-black px-1.5 py-0.5 rounded text-xs font-black">{{ isEditMode ? 'EDIT' : 'NEW' }}</span>
+            {{ isEditMode ? '編輯角色資料' : '登記新角色' }}
+          </h3>
+          <button @click="showModal = false" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">角色 ID / 暱稱</label>
+            <input v-model="form.name" type="text" placeholder="輸入遊戲 ID" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">職業</label>
+            <input v-model="form.job" type="text" placeholder="例如：主教、夜使者、英雄" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">等級 (Lv)</label>
+            <input v-model.number="form.level" type="number" placeholder="例如：160" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button @click="showModal = false" class="flex-1 py-2.5 bg-ph-surface text-slate-300 rounded-xl font-bold hover:bg-ph-border transition">取消</button>
+          <button @click="saveMember" class="flex-1 py-2.5 bg-ph-orange hover:bg-ph-hover text-black rounded-xl font-black transition">確認儲存</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHcLAW64sSuz_ZzTRWTgR-GsghnldhiAI",
+      authDomain: "bossraid-hub.firebaseapp.com",
+      databaseURL: "https://bossraid-hub-default-rtdb.firebaseio.com",
+      projectId: "bossraid-hub",
+      storageBucket: "bossraid-hub.firebasestorage.app",
+      messagingSenderId: "561965613969",
+      appId: "1:561965613969:web:2379999ac7c0524e5d9030"
+    };
+
+    let rtdb = null;
+    let dbRef = null;
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      rtdb = firebase.database();
+      dbRef = rtdb.ref('raid_data_v3');
+    } catch (e) {
+      console.error('Firebase init error:', e);
+    }
+
+    createApp({
+      setup() {
+        const currentTab = ref('signup');
+        const currentWeekKey = ref('thisWeek');
+        const showModal = ref(false);
+        const isEditMode = ref(false);
+        const editTargetId = ref(null);
+        const isLoaded = ref(false);
+
+        const syncStatus = ref({
+          text: '載入雲端資料中...',
+          color: 'text-amber-400',
+          bg: 'bg-amber-500'
+        });
+
+        const selectedUser = ref('');
+        const selectedBosses = ref(['闇黑龍王']);
+        const filterBoss = ref('all');
+
+        const form = ref({ name: '', job: '', level: 160 });
+
+        const bosses = ref([
+          { id: 'papulatus', name: '拉圖斯', icon: '⏰' },
+          { id: 'chaos_zakum', name: '殘暴炎魔', icon: '🗿' },
+          { id: 'papulatus_hard', name: '拉圖斯(困難)', icon: '⏳' },
+          { id: 'horntail', name: '闇黑龍王', icon: '🐉' },
+          { id: 'krexel', name: '克雷塞爾', icon: '🌳' },
+          { id: 'krexel2', name: '克雷塞爾 2', icon: '🍃' },
+          { id: 'epinea_poison', name: '艾畢奈雅(毒)', icon: '🟢🦋' },
+          { id: 'epinea_ice', name: '艾畢奈雅(冰)', icon: '🔵🦋' }
+        ]);
+
+        const getBossIcon = (bossName) => {
+          const found = bosses.value.find(b => b.name === bossName);
+          return found ? found.icon : '⚔️';
+        };
+
+        const getBossArray = (bossString) => {
+          if (!bossString || bossString === '未報名') return ['未報名'];
+          return bossString.split(' + ');
+        };
+
+        const getTuesdayCycle = (offsetWeeks = 0) => {
+          const now = new Date();
+          const day = now.getDay();
+          const diffToTuesday = (day >= 2 ? day - 2 : day + 5);
+          
+          const tuesday = new Date(now);
+          tuesday.setDate(now.getDate() - diffToTuesday + (offsetWeeks * 7));
+          tuesday.setHours(0, 0, 0, 0);
+
+          const days = [];
+          const weekDayNames = ['二', '三', '四', '五', '六', '日', '一'];
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(tuesday);
+            d.setDate(tuesday.getDate() + i);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            days.push({
+              label: weekDayNames[i],
+              monthDay: mm + '/' + dd,
+              fullDate: d.getFullYear() + '-' + mm + '-' + dd
+            });
+          }
+          return days;
+        };
+
+        const thisWeekDays = getTuesdayCycle(0);
+        const nextWeekDays = getTuesdayCycle(1);
+
+        const weekRangeTexts = {
+          thisWeek: thisWeekDays[0].monthDay + ' - ' + thisWeekDays[6].monthDay,
+          nextWeek: nextWeekDays[0].monthDay + ' - ' + nextWeekDays[6].monthDay
+        };
+
+        const activeDays = computed(() => {
+          return currentWeekKey.value === 'thisWeek' ? thisWeekDays : nextWeekDays;
+        });
+
+        const db = ref({
+          cycleStart: thisWeekDays[0].fullDate,
+          members: {},
+          thisWeek: {},
+          nextWeek: {}
+        });
+
+        const syncToCloud = () => {
+          if (!dbRef || !isLoaded.value) return;
+          const payload = JSON.parse(JSON.stringify(db.value));
+          dbRef.set(payload).catch(err => {
+            console.error('Firebase save error:', err);
+          });
+        };
+
+        const forceCycleShift = () => {
+          if (confirm('確定要將【下週報名名單】直接推進為【本週報名名單】嗎？')) {
+            db.value.thisWeek = db.value.nextWeek || {};
+            db.value.nextWeek = {};
+            db.value.cycleStart = thisWeekDays[0].fullDate;
+            syncToCloud();
+            alert('已成功將下週名單推進為本週名單！');
+          }
+        };
+
+        onMounted(() => {
+          if (!dbRef) {
+            syncStatus.value = { text: 'Firebase未啟動', color: 'text-red-400', bg: 'bg-red-500' };
+            return;
+          }
+
+          dbRef.on('value', (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+              db.value = {
+                cycleStart: val.cycleStart || thisWeekDays[0].fullDate,
+                members: val.members || {},
+                thisWeek: val.thisWeek || {},
+                nextWeek: val.nextWeek || {}
+              };
+            }
+            isLoaded.value = true;
+            syncStatus.value = { text: '雲端即時連線', color: 'text-emerald-400', bg: 'bg-emerald-500' };
+          }, (err) => {
+            console.error('Firebase read error:', err);
+            syncStatus.value = { text: '權限受阻', color: 'text-red-400', bg: 'bg-red-500' };
+          });
+        });
+
+        const membersList = computed(() => Object.values(db.value.members || {}));
+
+        const currentList = computed(() => {
+          const weekData = db.value[currentWeekKey.value] || {};
+          return Object.keys(weekData).map(mId => {
+            const mInfo = db.value.members[mId] || { name: '未知角色', job: '未知', level: 0 };
+            return {
+              memberId: mId,
+              name: mInfo.name,
+              job: mInfo.job,
+              level: mInfo.level,
+              boss: weekData[mId].boss || '未報名',
+              note: weekData[mId].note || '',
+              availability: weekData[mId].availability || [true, true, true, true, true, true, true]
+            };
+          });
+        });
+
+        const unregisteredThisWeek = computed(() => {
+          const registeredIds = Object.keys(db.value.thisWeek || {});
+          return membersList.value.filter(m => !registeredIds.includes(m.id));
+        });
+
+        const unregisteredNextWeek = computed(() => {
+          const registeredIds = Object.keys(db.value.nextWeek || {});
+          return membersList.value.filter(m => !registeredIds.includes(m.id));
+        });
+
+        const quickSelectUser = (memberId, weekKey) => {
+          selectedUser.value = memberId;
+          currentWeekKey.value = weekKey;
+          currentTab.value = 'signup';
+          onUserOrWeekChange();
+        };
+
+        const updateMemberNote = (memberId, noteValue) => {
+          const wkKey = currentWeekKey.value;
+          if (db.value[wkKey] && db.value[wkKey][memberId]) {
+            db.value[wkKey][memberId].note = noteValue;
+            syncToCloud();
+          }
+        };
+
+        const switchTab = (tabName) => {
+          currentTab.value = tabName;
+          if (tabName === 'list') {
+            filterBoss.value = 'all';
+          }
+        };
+
+        const setSignupWeek = (wkKey) => {
+          currentWeekKey.value = wkKey;
+          onUserOrWeekChange();
+        };
+
+        const onUserOrWeekChange = () => {
+          if (!selectedUser.value) return;
+          const weekData = db.value[currentWeekKey.value] || {};
+          if (weekData[selectedUser.value] && weekData[selectedUser.value].boss) {
+            selectedBosses.value = weekData[selectedUser.value].boss.split(' + ');
+          } else {
+            selectedBosses.value = ['闇黑龍王'];
+          }
+        };
+
+        const openAddModal = () => {
+          isEditMode.value = false;
+          form.value = { name: '', job: '', level: 160 };
+          showModal.value = true;
+        };
+
+        const openEditModal = (item) => {
+          isEditMode.value = true;
+          editTargetId.value = item.memberId;
+          const m = db.value.members[item.memberId];
+          form.value = { name: m.name, job: m.job, level: m.level };
+          showModal.value = true;
+        };
+
+        const saveMember = () => {
+          if (!form.value.name.trim() || !form.value.job.trim()) {
+            alert('請完整填寫 ID 與職業！');
+            return;
+          }
+
+          if (isEditMode.value) {
+            if (db.value.members[editTargetId.value]) {
+              db.value.members[editTargetId.value].name = form.value.name.trim();
+              db.value.members[editTargetId.value].job = form.value.job.trim();
+              db.value.members[editTargetId.value].level = form.value.level || 150;
+            }
+            alert('角色資訊已更新！');
+          } else {
+            const newId = 'm_' + Date.now();
+            if (!db.value.members) db.value.members = {};
+            db.value.members[newId] = {
+              id: newId,
+              name: form.value.name.trim(),
+              job: form.value.job.trim(),
+              level: form.value.level || 150
+            };
+            selectedUser.value = newId;
+            alert('角色登記完成！');
+          }
+          syncToCloud();
+          showModal.value = false;
+        };
+
+        const deletePermanentMember = (memberId) => {
+          if (!memberId || !db.value.members[memberId]) return;
+          const targetName = db.value.members[memberId].name;
+          if (confirm('⚠️ 警告：確定要將【' + targetName + '】永久刪除嗎？\n此動作會將該角色自選單以及所有週次的報名中徹底清除！')) {
+            delete db.value.members[memberId];
+            if (db.value.thisWeek && db.value.thisWeek[memberId]) delete db.value.thisWeek[memberId];
+            if (db.value.nextWeek && db.value.nextWeek[memberId]) delete db.value.nextWeek[memberId];
+            
+            selectedUser.value = '';
+            syncToCloud();
+            alert('已永久註銷角色【' + targetName + '】！');
+          }
+        };
+
+        const deleteFromCurrentWeek = (memberId) => {
+          const wkText = currentWeekKey.value === 'thisWeek' ? '本週' : '下週';
+          if (confirm('確定要將該角色從【' + wkText + '名單】移除嗎？（角色依然保留在選單中）')) {
+            if (db.value[currentWeekKey.value]) {
+              delete db.value[currentWeekKey.value][memberId];
+              syncToCloud();
+            }
+          }
+        };
+
+        const toggleDay = (item, dayIdx) => {
+          const weekData = db.value[currentWeekKey.value];
+          if (weekData && weekData[item.memberId]) {
+            weekData[item.memberId].availability[dayIdx] = !weekData[item.memberId].availability[dayIdx];
+            syncToCloud();
+          }
+        };
+
+        const toggleBoss = (bossName) => {
+          const idx = selectedBosses.value.indexOf(bossName);
+          if (idx > -1) {
+            selectedBosses.value.splice(idx, 1);
+          } else {
+            if (selectedBosses.value.length >= 2) {
+              alert('每週最多只能報名 2 個副本！');
+              return;
+            }
+            selectedBosses.value.push(bossName);
+          }
+        };
+
+        const submitSignup = () => {
+          if (!selectedUser.value) return;
+          const wkKey = currentWeekKey.value;
+          if (!db.value[wkKey]) db.value[wkKey] = {};
+
+          const existing = db.value[wkKey][selectedUser.value];
+          db.value[wkKey][selectedUser.value] = {
+            boss: selectedBosses.value.join(' + '),
+            note: existing ? (existing.note || '') : '',
+            availability: existing ? (existing.availability || [true, true, true, true, true, true, true]) : [true, true, true, true, true, true, true]
+          };
+
+          syncToCloud();
+          const targetMember = db.value.members[selectedUser.value];
+          alert('已成功將【' + targetMember.name + '】登記至【' + (wkKey === 'thisWeek' ? '本週' : '下週') + '】名單！');
+          switchTab('list');
+        };
+
+        const filteredList = computed(() => {
+          return currentList.value.filter(item => {
+            if (filterBoss.value === 'all') return true;
+            if (!item.boss) return false;
+            const userBosses = item.boss.split(' + ');
+            return userBosses.includes(filterBoss.value);
+          });
+        });
+
+        return {
+          currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
+          selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
+          membersList, currentList, filterBoss, form, filteredList,
+          unregisteredThisWeek, unregisteredNextWeek, quickSelectUser, forceCycleShift,
+          getBossIcon, getBossArray, updateMemberNote, switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
+          saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

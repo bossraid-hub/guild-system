@@ -270,7 +270,7 @@
         </div>
       </div>
 
-      <!-- 副本圖示切換列（已取代舊的下拉選單與搜尋列） -->
+      <!-- 副本圖示切換列 -->
       <div class="flex flex-wrap gap-2 pt-1 pb-1">
         <button 
           @click="filterBoss = 'all'"
@@ -537,14 +537,29 @@
 
           dbRef.on('value', (snapshot) => {
             const val = snapshot.val();
+            const realCurrentTuesday = thisWeekDays[0].fullDate;
+
             if (val) {
               db.value = {
-                cycleStart: val.cycleStart || thisWeekDays[0].fullDate,
+                cycleStart: val.cycleStart || realCurrentTuesday,
                 members: val.members || {},
                 thisWeek: val.thisWeek || {},
                 nextWeek: val.nextWeek || {}
               };
+
+              // 自動偵測是否跨過週二：如果雲端記錄的 cycleStart 早於本週實際的週二，代表進入新的一週！
+              if (db.value.cycleStart < realCurrentTuesday) {
+                console.log('偵測到新的一週開始，自動將下週名單推進為本週！');
+                db.value.thisWeek = db.value.nextWeek || {};
+                db.value.nextWeek = {};
+                db.value.cycleStart = realCurrentTuesday;
+                // 自動更新回雲端
+                dbRef.set(JSON.parse(JSON.stringify(db.value)));
+              }
+            } else {
+              db.value.cycleStart = realCurrentTuesday;
             }
+
             isLoaded.value = true;
             syncStatus.value = { text: '雲端即時連線', color: 'text-emerald-400', bg: 'bg-emerald-500' };
           }, (err) => {
@@ -664,7 +679,7 @@
         const deletePermanentMember = (memberId) => {
           if (!memberId || !db.value.members[memberId]) return;
           const targetName = db.value.members[memberId].name;
-          if (confirm('⚠️ 警告：確定要將【' + targetName + '】永久刪除嗎？\n此動作會將該角色自選單以及所有週次的報名中徹底清除！')) {
+          if (confirm('⚠️ 警告: 確定要將【' + targetName + '】永久刪除嗎？\n此動作會將該角色自選單以及所有週次的報名中徹底清除！')) {
             delete db.value.members[memberId];
             if (db.value.thisWeek && db.value.thisWeek[memberId]) delete db.value.thisWeek[memberId];
             if (db.value.nextWeek && db.value.nextWeek[memberId]) delete db.value.nextWeek[memberId];

@@ -6,11 +6,9 @@
   
   <title>BH</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23ff9000'/><text x='16' y='23' font-family='Arial, Helvetica, sans-serif' font-size='18' font-weight='700' text-anchor='middle' fill='%23000000'>BH</text></svg>">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
-
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -39,7 +37,6 @@
 </head>
 <body class="bg-ph-black text-slate-200 min-h-screen p-3 md:p-6 font-sans select-none">
   <div id="app" class="max-w-6xl mx-auto space-y-4">
-
     <!-- 頂部導覽列 -->
     <header class="bg-ph-card border border-ph-border rounded-2xl p-4 flex justify-between items-center shadow-2xl">
       <div class="flex items-center space-x-3">
@@ -60,7 +57,6 @@
           <p class="text-[11px] text-slate-400">組隊・刷王・動態週期出勤統計（每週二 00:00 重置）</p>
         </div>
       </div>
-
       <div class="flex items-center gap-2">
         <button @click="forceCycleShift" title="把下週報名名單直接推進為本週" class="text-xs bg-ph-surface hover:bg-ph-border text-slate-300 font-bold px-3 py-2 rounded-xl border border-ph-border flex items-center gap-1.5 transition">
           <i class="fa-solid fa-arrows-rotate text-ph-orange"></i> 手動推進週次
@@ -70,7 +66,6 @@
         </button>
       </div>
     </header>
-
     <!-- 分頁 Tab -->
     <nav class="flex space-x-2 bg-ph-card p-1.5 rounded-xl border border-ph-border text-xs">
       <button 
@@ -88,7 +83,6 @@
         <i class="fa-solid fa-list-check"></i> 報名名單
       </button>
     </nav>
-
     <!-- 分頁 1: 每週報名 -->
     <main v-if="currentTab === 'signup'" class="space-y-4">
       <div class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow-2xl space-y-6">
@@ -101,7 +95,6 @@
           </div>
           <button @click="openAddModal" class="text-xs text-ph-orange hover:underline font-bold">+ 登記新角色</button>
         </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- 選擇角色與刪除角色按鈕 -->
           <div>
@@ -131,7 +124,6 @@
               </button>
             </div>
           </div>
-
           <!-- 選擇週次 -->
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1.5">選擇欲報名的週次</label>
@@ -153,7 +145,6 @@
             </div>
           </div>
         </div>
-
         <!-- 副本選擇 -->
         <div>
           <div class="flex justify-between items-center mb-2">
@@ -162,7 +153,6 @@
             </label>
             <span class="text-xs font-mono font-bold" :class="selectedBosses.length === 2 ? 'text-ph-orange' : 'text-slate-500'">已選 {{ selectedBosses.length }}/2</span>
           </div>
-
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div 
               v-for="b in bosses" :key="b.id" 
@@ -180,12 +170,10 @@
             </div>
           </div>
         </div>
-
         <button @click="submitSignup" :disabled="!selectedUser || selectedBosses.length === 0" class="w-full py-3 bg-ph-orange hover:bg-ph-hover disabled:bg-ph-surface disabled:text-slate-600 text-black text-sm font-black rounded-xl transition shadow-lg">
           確認報名 {{ currentWeekKey === 'thisWeek' ? '【本週】' : '【下週】' }}
         </button>
       </div>
-
       <!-- 未報名角色統計欄位 -->
       <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- 本週未報名區塊 -->
@@ -197,11 +185,9 @@
             </div>
             <span class="text-[10px] text-slate-500 font-mono">{{ weekRangeTexts.thisWeek }}</span>
           </div>
-
           <div v-if="unregisteredThisWeek.length === 0" class="text-center py-4 text-xs text-emerald-400 font-bold flex items-center justify-center gap-1.5">
             <i class="fa-solid fa-circle-check"></i> 本週全員皆已完成副本報名！
           </div>
-
           <div v-else class="flex flex-wrap gap-2">
             <div 
               v-for="m in unregisteredThisWeek" 
@@ -218,7 +204,6 @@
             </div>
           </div>
         </div>
-
         <!-- 下週未報名區塊 -->
         <div class="bg-ph-card border border-ph-border rounded-2xl p-4 shadow-xl">
           <div class="flex items-center justify-between border-b border-ph-border pb-2.5 mb-3">
@@ -228,11 +213,9 @@
             </div>
             <span class="text-[10px] text-slate-500 font-mono">{{ weekRangeTexts.nextWeek }}</span>
           </div>
-
           <div v-if="unregisteredNextWeek.length === 0" class="text-center py-4 text-xs text-emerald-400 font-bold flex items-center justify-center gap-1.5">
             <i class="fa-solid fa-circle-check"></i> 下週全員皆已完成副本報名！
           </div>
-
           <div v-else class="flex flex-wrap gap-2">
             <div 
               v-for="m in unregisteredNextWeek" 
@@ -251,7 +234,6 @@
         </div>
       </section>
     </main>
-
     <!-- 分頁 2: 報名名單與出勤狀態 -->
     <main v-if="currentTab === 'list'" class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow-2xl space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-ph-border pb-4">
@@ -269,7 +251,6 @@
           <p class="text-xs text-slate-400 mt-1">目前檢視：<span class="text-ph-orange font-bold">{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}</span>（每週二自動結算輪替）</p>
         </div>
       </div>
-
       <!-- 副本圖示切換列 -->
       <div class="flex flex-wrap gap-2 pt-1 pb-1">
         <button 
@@ -278,9 +259,8 @@
           class="px-3.5 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
         >
           <i class="fa-solid fa-layer-group text-sm"></i>
-          <span>所有副本</span>
+          <span>所有副本 ({{ bossCounts.all }})</span>
         </button>
-
         <button 
           v-for="b in bosses" :key="b.id"
           @click="filterBoss = b.name"
@@ -288,10 +268,9 @@
           class="px-3 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
         >
           <span class="text-base leading-none">{{ b.icon }}</span>
-          <span class="font-bold">{{ b.name }}</span>
+          <span class="font-bold">{{ b.name }} ({{ bossCounts[b.name] || 0 }})</span>
         </button>
       </div>
-
       <!-- 出勤勾選表格 -->
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse min-w-[850px]">
@@ -364,7 +343,6 @@
         </table>
       </div>
     </main>
-
     <!-- 登記 / 編輯角色彈窗 -->
     <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div class="bg-ph-card border border-ph-border rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
@@ -375,7 +353,6 @@
           </h3>
           <button @click="showModal = false" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
-
         <div class="space-y-3 text-xs">
           <div>
             <label class="block font-bold text-slate-300 mb-1">角色 ID / 暱稱</label>
@@ -390,19 +367,15 @@
             <input v-model.number="form.level" type="number" placeholder="例如：160" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
           </div>
         </div>
-
         <div class="flex gap-2 pt-2">
           <button @click="showModal = false" class="flex-1 py-2.5 bg-ph-surface text-slate-300 rounded-xl font-bold hover:bg-ph-border transition">取消</button>
           <button @click="saveMember" class="flex-1 py-2.5 bg-ph-orange hover:bg-ph-hover text-black rounded-xl font-black transition">確認儲存</button>
         </div>
       </div>
     </div>
-
   </div>
-
   <script>
     const { createApp, ref, computed, onMounted } = Vue;
-
     const firebaseConfig = {
       apiKey: "AIzaSyAHcLAW64sSuz_ZzTRWTgR-GsghnldhiAI",
       authDomain: "bossraid-hub.firebaseapp.com",
@@ -412,7 +385,6 @@
       messagingSenderId: "561965613969",
       appId: "1:561965613969:web:2379999ac7c0524e5d9030"
     };
-
     let rtdb = null;
     let dbRef = null;
     try {
@@ -424,7 +396,6 @@
     } catch (e) {
       console.error('Firebase init error:', e);
     }
-
     createApp({
       setup() {
         const currentTab = ref('signup');
@@ -433,19 +404,15 @@
         const isEditMode = ref(false);
         const editTargetId = ref(null);
         const isLoaded = ref(false);
-
         const syncStatus = ref({
           text: '載入雲端資料中...',
           color: 'text-amber-400',
           bg: 'bg-amber-500'
         });
-
         const selectedUser = ref('');
         const selectedBosses = ref(['闇黑龍王']);
         const filterBoss = ref('all');
-
         const form = ref({ name: '', job: '', level: 160 });
-
         const bosses = ref([
           { id: 'papulatus', name: '拉圖斯', icon: '⏰' },
           { id: 'chaos_zakum', name: '殘暴炎魔', icon: '🗿' },
@@ -456,17 +423,14 @@
           { id: 'epinea_poison', name: '艾畢奈雅(毒)', icon: '🟢🦋' },
           { id: 'epinea_ice', name: '艾畢奈雅(冰)', icon: '🔵🦋' }
         ]);
-
         const getBossIcon = (bossName) => {
           const found = bosses.value.find(b => b.name === bossName);
           return found ? found.icon : '⚔️';
         };
-
         const getBossArray = (bossString) => {
           if (!bossString || bossString === '未報名') return ['未報名'];
           return bossString.split(' + ');
         };
-
         const getTuesdayCycle = (offsetWeeks = 0) => {
           const now = new Date();
           const day = now.getDay();
@@ -475,7 +439,6 @@
           const tuesday = new Date(now);
           tuesday.setDate(now.getDate() - diffToTuesday + (offsetWeeks * 7));
           tuesday.setHours(0, 0, 0, 0);
-
           const days = [];
           const weekDayNames = ['二', '三', '四', '五', '六', '日', '一'];
           for (let i = 0; i < 7; i++) {
@@ -491,26 +454,21 @@
           }
           return days;
         };
-
         const thisWeekDays = getTuesdayCycle(0);
         const nextWeekDays = getTuesdayCycle(1);
-
         const weekRangeTexts = {
           thisWeek: thisWeekDays[0].monthDay + ' - ' + thisWeekDays[6].monthDay,
           nextWeek: nextWeekDays[0].monthDay + ' - ' + nextWeekDays[6].monthDay
         };
-
         const activeDays = computed(() => {
           return currentWeekKey.value === 'thisWeek' ? thisWeekDays : nextWeekDays;
         });
-
         const db = ref({
           cycleStart: thisWeekDays[0].fullDate,
           members: {},
           thisWeek: {},
           nextWeek: {}
         });
-
         const syncToCloud = () => {
           if (!dbRef || !isLoaded.value) return;
           const payload = JSON.parse(JSON.stringify(db.value));
@@ -518,7 +476,6 @@
             console.error('Firebase save error:', err);
           });
         };
-
         const forceCycleShift = () => {
           if (confirm('確定要將【下週報名名單】直接推進為【本週報名名單】嗎？')) {
             db.value.thisWeek = db.value.nextWeek || {};
@@ -528,17 +485,14 @@
             alert('已成功將下週名單推進為本週名單！');
           }
         };
-
         onMounted(() => {
           if (!dbRef) {
             syncStatus.value = { text: 'Firebase未啟動', color: 'text-red-400', bg: 'bg-red-500' };
             return;
           }
-
           dbRef.on('value', (snapshot) => {
             const val = snapshot.val();
             const realCurrentTuesday = thisWeekDays[0].fullDate;
-
             if (val) {
               db.value = {
                 cycleStart: val.cycleStart || realCurrentTuesday,
@@ -546,7 +500,6 @@
                 thisWeek: val.thisWeek || {},
                 nextWeek: val.nextWeek || {}
               };
-
               // 自動偵測是否跨過週二：如果雲端記錄的 cycleStart 早於本週實際的週二，代表進入新的一週！
               if (db.value.cycleStart < realCurrentTuesday) {
                 console.log('偵測到新的一週開始，自動將下週名單推進為本週！');
@@ -559,7 +512,6 @@
             } else {
               db.value.cycleStart = realCurrentTuesday;
             }
-
             isLoaded.value = true;
             syncStatus.value = { text: '雲端即時連線', color: 'text-emerald-400', bg: 'bg-emerald-500' };
           }, (err) => {
@@ -567,9 +519,7 @@
             syncStatus.value = { text: '權限受阻', color: 'text-red-400', bg: 'bg-red-500' };
           });
         });
-
         const membersList = computed(() => Object.values(db.value.members || {}));
-
         const currentList = computed(() => {
           const weekData = db.value[currentWeekKey.value] || {};
           return Object.keys(weekData).map(mId => {
@@ -585,24 +535,35 @@
             };
           });
         });
-
         const unregisteredThisWeek = computed(() => {
           const registeredIds = Object.keys(db.value.thisWeek || {});
           return membersList.value.filter(m => !registeredIds.includes(m.id));
         });
-
         const unregisteredNextWeek = computed(() => {
           const registeredIds = Object.keys(db.value.nextWeek || {});
           return membersList.value.filter(m => !registeredIds.includes(m.id));
         });
-
+        const bossCounts = computed(() => {
+          const counts = { all: currentList.value.length };
+          bosses.value.forEach(b => {
+            counts[b.name] = 0;
+          });
+          currentList.value.forEach(item => {
+            const userBosses = getBossArray(item.boss);
+            userBosses.forEach(bossName => {
+              if (counts[bossName] !== undefined) {
+                counts[bossName]++;
+              }
+            });
+          });
+          return counts;
+        });
         const quickSelectUser = (memberId, weekKey) => {
           selectedUser.value = memberId;
           currentWeekKey.value = weekKey;
           currentTab.value = 'signup';
           onUserOrWeekChange();
         };
-
         const updateMemberNote = (memberId, noteValue) => {
           const wkKey = currentWeekKey.value;
           if (db.value[wkKey] && db.value[wkKey][memberId]) {
@@ -610,19 +571,16 @@
             syncToCloud();
           }
         };
-
         const switchTab = (tabName) => {
           currentTab.value = tabName;
           if (tabName === 'list') {
             filterBoss.value = 'all';
           }
         };
-
         const setSignupWeek = (wkKey) => {
           currentWeekKey.value = wkKey;
           onUserOrWeekChange();
         };
-
         const onUserOrWeekChange = () => {
           if (!selectedUser.value) return;
           const weekData = db.value[currentWeekKey.value] || {};
@@ -632,13 +590,11 @@
             selectedBosses.value = ['闇黑龍王'];
           }
         };
-
         const openAddModal = () => {
           isEditMode.value = false;
           form.value = { name: '', job: '', level: 160 };
           showModal.value = true;
         };
-
         const openEditModal = (item) => {
           isEditMode.value = true;
           editTargetId.value = item.memberId;
@@ -646,13 +602,11 @@
           form.value = { name: m.name, job: m.job, level: m.level };
           showModal.value = true;
         };
-
         const saveMember = () => {
           if (!form.value.name.trim() || !form.value.job.trim()) {
             alert('請完整填寫 ID 與職業！');
             return;
           }
-
           if (isEditMode.value) {
             if (db.value.members[editTargetId.value]) {
               db.value.members[editTargetId.value].name = form.value.name.trim();
@@ -675,7 +629,6 @@
           syncToCloud();
           showModal.value = false;
         };
-
         const deletePermanentMember = (memberId) => {
           if (!memberId || !db.value.members[memberId]) return;
           const targetName = db.value.members[memberId].name;
@@ -689,7 +642,6 @@
             alert('已永久註銷角色【' + targetName + '】！');
           }
         };
-
         const deleteFromCurrentWeek = (memberId) => {
           const wkText = currentWeekKey.value === 'thisWeek' ? '本週' : '下週';
           if (confirm('確定要將該角色從【' + wkText + '名單】移除嗎？（角色依然保留在選單中）')) {
@@ -699,7 +651,6 @@
             }
           }
         };
-
         const toggleDay = (item, dayIdx) => {
           const weekData = db.value[currentWeekKey.value];
           if (weekData && weekData[item.memberId]) {
@@ -707,7 +658,6 @@
             syncToCloud();
           }
         };
-
         const toggleBoss = (bossName) => {
           const idx = selectedBosses.value.indexOf(bossName);
           if (idx > -1) {
@@ -720,25 +670,21 @@
             selectedBosses.value.push(bossName);
           }
         };
-
         const submitSignup = () => {
           if (!selectedUser.value) return;
           const wkKey = currentWeekKey.value;
           if (!db.value[wkKey]) db.value[wkKey] = {};
-
           const existing = db.value[wkKey][selectedUser.value];
           db.value[wkKey][selectedUser.value] = {
             boss: selectedBosses.value.join(' + '),
             note: existing ? (existing.note || '') : '',
             availability: existing ? (existing.availability || [true, true, true, true, true, true, true]) : [true, true, true, true, true, true, true]
           };
-
           syncToCloud();
           const targetMember = db.value.members[selectedUser.value];
           alert('已成功將【' + targetMember.name + '】登記至【' + (wkKey === 'thisWeek' ? '本週' : '下週') + '】名單！');
           switchTab('list');
         };
-
         const filteredList = computed(() => {
           return currentList.value.filter(item => {
             if (filterBoss.value === 'all') return true;
@@ -747,14 +693,14 @@
             return userBosses.includes(filterBoss.value);
           });
         });
-
         return {
           currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
           selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
           membersList, currentList, filterBoss, form, filteredList,
           unregisteredThisWeek, unregisteredNextWeek, quickSelectUser, forceCycleShift,
           getBossIcon, getBossArray, updateMemberNote, switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
-          saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud
+          saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud,
+          bossCounts
         };
       }
     }).mount('#app');

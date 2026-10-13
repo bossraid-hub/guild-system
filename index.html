@@ -366,55 +366,89 @@
           </div>
         </div>
 
-        <!-- 時間軸圖例 -->
-        <div class="flex flex-wrap gap-3 text-[10px] text-slate-400">
-          <span class="flex items-center gap-1.5"><span class="w-3 h-2 rounded-sm bg-emerald-500/80"></span>進行中</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-2 rounded-sm bg-ph-orange"></span>3天內到期</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-2 rounded-sm bg-sky-500/80"></span>商城禮包</span>
-        </div>
-
-        <!-- 有時間條的項目（活動 + 商城） -->
-        <div class="space-y-3">
-          <div v-for="item in timedScheduleItems" :key="item.id"
-               class="bg-ph-surface border rounded-xl p-3.5 transition"
-               :class="item.daysLeft <= 3 ? 'border-ph-orange/50' : 'border-ph-border'">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
-              <div class="flex items-start gap-2.5 min-w-0">
-                <span class="text-lg shrink-0">{{ item.icon }}</span>
-                <div class="min-w-0">
-                  <div class="text-sm font-bold text-white truncate">{{ item.title }}</div>
-                  <div class="text-[11px] text-slate-400 mt-0.5">{{ item.desc }}</div>
+        <!-- ===== 活動更新 ===== -->
+        <div>
+          <h3 class="text-sm font-bold text-ph-orange mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days"></i> 活動更新
+          </h3>
+          <div v-if="eventItems.length === 0" class="text-center py-4 text-slate-500 text-xs">目前沒有進行中的活動</div>
+          <div class="space-y-3">
+            <div v-for="item in eventItems" :key="item.id"
+                 class="bg-ph-surface border rounded-xl p-3.5 transition"
+                 :class="item.daysLeft <= 3 ? 'border-ph-orange/50' : 'border-ph-border'">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-start gap-2.5 min-w-0">
+                  <span class="text-lg shrink-0">{{ item.icon }}</span>
+                  <div class="min-w-0">
+                    <div class="text-sm font-bold text-white truncate">{{ item.title }}</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">{{ item.desc }}</div>
+                  </div>
+                </div>
+                <div class="text-right shrink-0 flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
+                  <span class="text-[10px] px-2 py-0.5 rounded font-bold"
+                        :class="item.daysLeft <= 0 ? 'bg-red-900/50 text-red-300' : item.daysLeft <= 3 ? 'bg-ph-orange/20 text-ph-orange' : 'bg-emerald-900/40 text-emerald-400'">
+                    {{ item.daysLeft <= 0 ? '已結束' : '剩 ' + item.daysLeft + ' 天' }}
+                  </span>
+                  <span class="text-[10px] text-slate-500 font-mono">{{ item.endLabel }}</span>
                 </div>
               </div>
-              <div class="text-right shrink-0 flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
-                <span class="text-[10px] px-2 py-0.5 rounded font-bold"
-                      :class="item.daysLeft <= 0 ? 'bg-red-900/50 text-red-300' : item.daysLeft <= 3 ? 'bg-ph-orange/20 text-ph-orange' : 'bg-emerald-900/40 text-emerald-400'">
-                  {{ item.daysLeft <= 0 ? '已結束' : '剩 ' + item.daysLeft + ' 天' }}
-                </span>
-                <span class="text-[10px] text-slate-500 font-mono">{{ item.endLabel }}</span>
+              <div class="relative h-1.5 bg-slate-600/80 rounded-full mt-0.5">
+                <div class="absolute inset-y-0 left-0 rounded-full bg-ph-orange transition-all"
+                     :style="{ width: item.progressPct + '%' }"></div>
+                <div class="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow border border-white/20 z-10"
+                     :style="{ left: 'calc(' + item.todayPct + '% - 7px)' }"
+                     title="今天"></div>
               </div>
-            </div>
-            <!-- 進度時間條 -->
-            <div class="relative h-2.5 bg-ph-black/60 rounded-full overflow-hidden border border-ph-border/50">
-              <div class="absolute inset-y-0 left-0 rounded-full transition-all"
-                   :style="{ width: item.progressPct + '%' }"
-                   :class="item.barClass"></div>
-              <div class="absolute top-0 bottom-0 w-0.5 bg-white/70 z-10"
-                   :style="{ left: item.todayPct + '%' }"
-                   title="今天"></div>
-            </div>
-            <div class="flex justify-between mt-1 text-[9px] text-slate-500 font-mono">
-              <span>{{ item.startLabel }}</span>
-              <span>{{ item.endLabel }}</span>
+              <div class="flex justify-between mt-1 text-[9px] text-slate-500 font-mono">
+                <span>{{ item.startLabel }}</span>
+                <span>{{ item.endLabel }}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div v-if="timedScheduleItems.length === 0" class="text-center py-6 text-slate-500 text-sm">
-          目前沒有進行中的活動或禮包
+        <!-- ===== 購物商城 ===== -->
+        <div class="border-t border-ph-border pt-4">
+          <h3 class="text-sm font-bold text-ph-orange mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-store"></i> 購物商城
+          </h3>
+          <div v-if="shopItems.length === 0" class="text-center py-4 text-slate-500 text-xs">目前沒有限時禮包</div>
+          <div class="space-y-3">
+            <div v-for="item in shopItems" :key="item.id"
+                 class="bg-ph-surface border rounded-xl p-3.5 transition"
+                 :class="item.daysLeft <= 3 ? 'border-ph-orange/50' : 'border-ph-border'">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-start gap-2.5 min-w-0">
+                  <span class="text-lg shrink-0">{{ item.icon }}</span>
+                  <div class="min-w-0">
+                    <div class="text-sm font-bold text-white truncate">{{ item.title }}</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">{{ item.desc }}</div>
+                  </div>
+                </div>
+                <div class="text-right shrink-0 flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
+                  <span class="text-[10px] px-2 py-0.5 rounded font-bold"
+                        :class="item.daysLeft <= 0 ? 'bg-red-900/50 text-red-300' : item.daysLeft <= 3 ? 'bg-ph-orange/20 text-ph-orange' : 'bg-emerald-900/40 text-emerald-400'">
+                    {{ item.daysLeft <= 0 ? '已結束' : '剩 ' + item.daysLeft + ' 天' }}
+                  </span>
+                  <span class="text-[10px] text-slate-500 font-mono">{{ item.endLabel }}</span>
+                </div>
+              </div>
+              <div class="relative h-1.5 bg-slate-600/80 rounded-full mt-0.5">
+                <div class="absolute inset-y-0 left-0 rounded-full bg-ph-orange transition-all"
+                     :style="{ width: item.progressPct + '%' }"></div>
+                <div class="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow border border-white/20 z-10"
+                     :style="{ left: 'calc(' + item.todayPct + '% - 7px)' }"
+                     title="今天"></div>
+              </div>
+              <div class="flex justify-between mt-1 text-[9px] text-slate-500 font-mono">
+                <span>{{ item.startLabel }}</span>
+                <span>{{ item.endLabel }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Coming Soon（純文字，不顯示時間條） -->
+        <!-- Coming Soon -->
         <div v-if="soonItems.length > 0" class="border-t border-ph-border pt-4">
           <h3 class="text-sm font-bold text-violet-400 mb-2.5 flex items-center gap-2">
             <i class="fa-solid fa-bullhorn"></i> Coming Soon
@@ -608,32 +642,40 @@
           const d = new Date();
           return (d.getMonth()+1) + '/' + d.getDate() + '（' + ['日','一','二','三','四','五','六'][d.getDay()] + '）';
         });
-        // 有時間條的項目（event + shop），自動過濾已過期
-        const timedScheduleItems = computed(() => {
+        // 計算時間進度（共用）
+        const enrichItem = (item) => {
           const now = new Date();
           now.setHours(0,0,0,0);
+          const start = new Date(item.start + 'T00:00:00');
+          const end = new Date(item.end + 'T00:00:00');
+          const totalMs = end - start;
+          const passedMs = now - start;
+          const daysLeft = Math.ceil((end - now) / 86400000);
+          let progressPct = totalMs > 0 ? Math.min(100, Math.max(0, (passedMs / totalMs) * 100)) : 0;
+          let todayPct = progressPct;
+          if (now < start) { progressPct = 0; todayPct = 0; }
+          if (now > end) { progressPct = 100; todayPct = 100; }
+          const startLabel = (start.getMonth()+1) + '/' + start.getDate();
+          const endLabel = (end.getMonth()+1) + '/' + end.getDate() + ' 維護前';
+          return { ...item, daysLeft, progressPct, todayPct, startLabel, endLabel };
+        };
+        // 活動更新
+        const eventItems = computed(() => {
           return scheduleItems.value
-            .filter(item => item.type !== 'soon')
-            .map(item => {
-              const start = new Date(item.start + 'T00:00:00');
-              const end = new Date(item.end + 'T00:00:00');
-              const totalMs = end - start;
-              const passedMs = now - start;
-              const daysLeft = Math.ceil((end - now) / 86400000);
-              let progressPct = totalMs > 0 ? Math.min(100, Math.max(0, (passedMs / totalMs) * 100)) : 0;
-              let todayPct = progressPct;
-              if (now < start) { progressPct = 0; todayPct = 0; }
-              if (now > end) { progressPct = 100; todayPct = 100; }
-              const barClass = item.type === 'shop' ? 'bg-sky-500/80'
-                : daysLeft <= 3 ? 'bg-ph-orange' : 'bg-emerald-500/80';
-              const startLabel = (start.getMonth()+1) + '/' + start.getDate();
-              const endLabel = (end.getMonth()+1) + '/' + end.getDate() + ' 維護前';
-              return { ...item, daysLeft, progressPct, todayPct, barClass, startLabel, endLabel };
-            })
+            .filter(item => item.type === 'event')
+            .map(enrichItem)
             .filter(item => item.daysLeft > -1)
             .sort((a, b) => a.daysLeft - b.daysLeft);
         });
-        // Coming Soon 純文字列表（不顯示時間條）
+        // 購物商城
+        const shopItems = computed(() => {
+          return scheduleItems.value
+            .filter(item => item.type === 'shop')
+            .map(enrichItem)
+            .filter(item => item.daysLeft > -1)
+            .sort((a, b) => a.daysLeft - b.daysLeft);
+        });
+        // Coming Soon
         const soonItems = computed(() => {
           return scheduleItems.value.filter(item => item.type === 'soon');
         });
@@ -917,7 +959,7 @@
           saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud,
           bossCounts,
           // 活動時間軸
-          scheduleUpdatedAt, scheduleItems, scheduleNotes, todayLabel, timedScheduleItems, soonItems
+          scheduleUpdatedAt, scheduleItems, scheduleNotes, todayLabel, eventItems, shopItems, soonItems
         };
       }
     }).mount('#app');

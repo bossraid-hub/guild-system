@@ -444,6 +444,22 @@
                 <span>{{ item.startLabel }}</span>
                 <span>{{ item.endLabel }}</span>
               </div>
+              <!-- 禮包內容物（可折疊） -->
+              <div v-if="item.contents && item.contents.length" class="mt-2.5 pt-2 border-t border-ph-border/40">
+                <button @click="toggleContents(item.id)"
+                        class="flex items-center gap-1.5 text-[11px] text-sky-400 hover:text-sky-300 font-bold transition">
+                  <i class="fa-solid text-[10px]" :class="expandedContents[item.id] ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                  {{ expandedContents[item.id] ? '收起內容物' : '查看內容物（' + item.contents.length + '）' }}
+                </button>
+                <ul v-show="expandedContents[item.id]" class="mt-2 space-y-1 pl-1">
+                  <li v-for="(c, ci) in item.contents" :key="ci"
+                      class="text-[11px] text-slate-300 flex items-center gap-1.5">
+                    <span class="text-ph-orange font-mono shrink-0">×{{ c.qty }}</span>
+                    <span>{{ c.name }}</span>
+                    <span v-if="c.note" class="text-slate-500 text-[10px]">（{{ c.note }}）</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -581,7 +597,7 @@
             type: 'event',
             icon: '💪',
             title: '萬聖節強化競賽',
-            desc: '強化[活動]萬聖節戒指，爭奪百鍊名匠稱號',
+            desc: '強化萬聖節戒指，12/8公布排名獎勵',
             start: '2026-10-20',
             end: '2026-12-01'
           },
@@ -590,9 +606,9 @@
             type: 'event',
             icon: '🪙',
             title: '南瓜硬幣商店',
-            desc: '狩獵收集南瓜硬幣兌換特別道具',
+            desc: '收集至11/17，商店開放至12/1',
             start: '2026-10-20',
-            end: '2026-11-17'
+            end: '2026-12-01'
           },
           {
             id: 'halloween-growth',
@@ -617,7 +633,7 @@
             type: 'event',
             icon: '⚔️',
             title: '第4週突襲主要道具掉落率 UP',
-            desc: '本週指定突襲BOSS主要道具掉落提升',
+            desc: '克雷塞爾、拉圖斯',
             start: '2026-10-20',
             end: '2026-10-27'
           },
@@ -629,7 +645,11 @@
             title: '卡蜜拉的成長支援禮包',
             desc: '50 WC　｜　帳號限購1次',
             start: '2026-10-20',
-            end: '2026-11-03'
+            end: '2026-11-03',
+            contents: [
+              { name: '經驗值3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' },
+              { name: '掉落率3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' }
+            ]
           },
           {
             id: 'shop-pumpkin',
@@ -638,7 +658,15 @@
             title: '南瓜的特別禮包',
             desc: '13,200 WC　｜　帳號限購5次',
             start: '2026-10-20',
-            end: '2026-11-17'
+            end: '2026-11-17',
+            contents: [
+              { name: '每週突襲精選箱', qty: 1, note: '開啟後14天內使用' },
+              { name: '[活動] 黃金突襲額外入場券', qty: 1, note: '' },
+              { name: '高級瞬移之石', qty: 11, note: '' },
+              { name: '生命的庇護', qty: 3, note: '' },
+              { name: '經驗值3倍券(10分鐘)', qty: 6, note: '開啟後14天內使用' },
+              { name: '掉落率3倍券(10分鐘)', qty: 6, note: '開啟後14天內使用' }
+            ]
           },
           {
             id: 'shop-hans',
@@ -647,7 +675,15 @@
             title: '漢斯的冒險補給禮包',
             desc: '6,600 WC　｜　帳號限購3次',
             start: '2026-10-20',
-            end: '2026-11-17'
+            end: '2026-11-17',
+            contents: [
+              { name: '掉落率2倍券(30分鐘)', qty: 5, note: '開啟後14天內使用' },
+              { name: '高級瞬移之石', qty: 10, note: '' },
+              { name: '凍結加持器', qty: 11, note: '' },
+              { name: '超級藥水', qty: 300, note: '' },
+              { name: '高效能喇叭UP', qty: 5, note: '' },
+              { name: '純白卷軸隨機箱', qty: 1, note: '開啟後14天內使用' }
+            ]
           },
           {
             id: 'shop-athena',
@@ -656,7 +692,14 @@
             title: '雅典娜女神的阿卡伊農挑戰禮包',
             desc: '4,000 WC　｜　帳號限購1次',
             start: '2026-10-20',
-            end: '2026-12-01'
+            end: '2026-12-01',
+            contents: [
+              { name: '[活動] 突襲額外入場券隨機箱', qty: 1, note: '開啟後14天內使用' },
+              { name: '歐洛拉戒指 +2 交換券(7日)', qty: 1, note: '開啟後14天內使用' },
+              { name: '甜蜜藥水箱', qty: 2, note: '開啟後14天內使用' },
+              { name: '生命的庇護箱', qty: 2, note: '開啟後14天內使用' },
+              { name: '可愛小蛇', qty: 1, note: '' }
+            ]
           },
           {
             id: 'shop-barber',
@@ -665,7 +708,14 @@
             title: '巴伯下士的討伐補給禮包',
             desc: '1,320 WC　｜　帳號限購3次',
             start: '2026-10-20',
-            end: '2026-12-01'
+            end: '2026-12-01',
+            contents: [
+              { name: '突襲額外入場券', qty: 7, note: '' },
+              { name: '高級瞬移之石', qty: 5, note: '' },
+              { name: '生命的庇護箱', qty: 1, note: '開啟後14天內使用' },
+              { name: '高效能喇叭UP', qty: 2, note: '' },
+              { name: '掉落率3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' }
+            ]
           },
           {
             id: 'shop-edmond',
@@ -674,7 +724,12 @@
             title: '管家艾德蒙的南瓜硬幣禮包',
             desc: '1,320 WC　｜　購買次數無限制',
             start: '2026-10-20',
-            end: '2026-11-17'
+            end: '2026-11-17',
+            contents: [
+              { name: '[活動] 南瓜硬幣', qty: 450, note: '' },
+              { name: '掉落率2倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' },
+              { name: '特殊藥水', qty: 30, note: '' }
+            ]
           },
           {
             id: 'shop-jack',
@@ -683,7 +738,10 @@
             title: '傑克的萬聖節禮物禮包',
             desc: '免費　｜　帳號每日限購1次',
             start: '2026-10-20',
-            end: '2026-11-17'
+            end: '2026-11-17',
+            contents: [
+              { name: '[活動] 南瓜硬幣', qty: 10, note: '' }
+            ]
           },
           {
             id: 'shop-cat-scroll',
@@ -692,7 +750,11 @@
             title: '流浪貓的卷軸禮包',
             desc: '660 WC　｜　帳號限購3次',
             start: '2026-10-20',
-            end: '2026-11-24'
+            end: '2026-11-24',
+            contents: [
+              { name: '60%卷軸箱', qty: 1, note: '開啟後14天內使用' },
+              { name: '掉落率3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' }
+            ]
           },
           {
             id: 'shop-trick-or-treat',
@@ -701,7 +763,11 @@
             title: '不給糖就搗蛋轉蛋券',
             desc: '1,000 / 4,750 WC　｜　轉蛋券可交易',
             start: '2026-10-20',
-            end: '2026-11-24'
+            end: '2026-11-24',
+            contents: [
+              { name: '不給糖就搗蛋轉蛋券箱子(5張)', qty: 1, note: '含轉蛋券×5 + 萬聖硬幣×5' },
+              { name: '不給糖就搗蛋轉蛋券箱子(25張)', qty: 1, note: '含轉蛋券×25 + 萬聖硬幣×28' }
+            ]
           },
           {
             id: 'shop-puppets',
@@ -710,7 +776,12 @@
             title: '可愛木偶寵物（藍／紫／橘）',
             desc: '1,600 WC　｜　膠囊可交易',
             start: '2026-10-20',
-            end: '2026-11-17'
+            end: '2026-11-17',
+            contents: [
+              { name: '可愛藍木偶', qty: 1, note: '開啟後不可交易' },
+              { name: '可愛紫木偶', qty: 1, note: '開啟後不可交易' },
+              { name: '可愛橘木偶', qty: 1, note: '開啟後不可交易' }
+            ]
           }
         ]);
         const scheduleNotes = ref([
@@ -719,6 +790,11 @@
           '萬聖節活動相關道具多數無法交易',
           '第4週突襲掉落UP至10/27維護前'
         ]);
+        // 禮包內容物展開狀態
+        const expandedContents = ref({});
+        const toggleContents = (id) => {
+          expandedContents.value[id] = !expandedContents.value[id];
+        };
         // ========== 活動時間軸資料結束 ==========
 
         // 時間軸計算
@@ -1043,7 +1119,8 @@
           saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud,
           bossCounts,
           // 活動時間軸
-          scheduleUpdatedAt, scheduleItems, scheduleNotes, todayLabel, eventItems, shopItems, soonItems
+          scheduleUpdatedAt, scheduleItems, scheduleNotes, todayLabel, eventItems, shopItems, soonItems,
+          expandedContents, toggleContents
         };
       }
     }).mount('#app');

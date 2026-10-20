@@ -1,1129 +1,2272 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="dark">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>楓之谷成本計算機</title>
   
-  <title>BH</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23ff9000'/><text x='16' y='23' font-family='Arial, Helvetica, sans-serif' font-size='18' font-weight='700' text-anchor='middle' fill='%23000000'>BH</text></svg>">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            ph: {
-              black: '#000000',
-              card: '#181818',
-              surface: '#242424',
-              border: '#333333',
-              orange: '#ff9000',
-              hover: '#e58200'
-            }
-          }
-        }
-      }
+  <!-- 自訂分頁圖示 -->
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+  <!-- 引入 Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      margin: 0;
+      color: #222;
+      background-color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-  </script>
-  <!-- 必須使用完整的 Vue 版本以確保模板正常編譯 -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    #cloudSyncStatus {
+      position: fixed;
+      top: 10px;
+      right: 15px;
+      background: rgba(40, 167, 69, 0.9);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #cloudSyncStatus.syncing {
+      background: rgba(255, 193, 7, 0.9);
+      color: #333;
+    }
+
+    .side-gallery {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 220px;
+      height: 450px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(5px);
+      z-index: 10;
+    }
+    .side-left { left: 25px; }
+    .side-right { right: 25px; }
+    .side-gallery img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: opacity 0.6s ease-in-out;
+    }
+
+    /* 左右大背景 */
+    .full-side-bg {
+      position: fixed;
+      top: 0;
+      height: 100vh;
+      width: 32vw;
+      z-index: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .full-side-left { left: 0; }
+    .full-side-right { right: 0; }
+
+    @media (max-width: 1350px) {
+      .side-gallery { display: none; }
+      .full-side-bg { display: none; }
+    }
+
+    .top-banner-gallery {
+      width: 100%;
+      max-width: 880px;
+      height: 200px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      backdrop-filter: blur(5px);
+      position: relative;
+    }
+    .top-banner-gallery img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.6s ease-in-out;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 880px;
+      background: rgba(255, 255, 255, 0.82);
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      backdrop-filter: blur(8px);
+      margin-bottom: 20px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(0,0,0,0.1);
+      padding-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 8px 14px;
+      border: none;
+      background: rgba(255, 255, 255, 0.8);
+      color: #333;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #c55a11 !important;
+      color: #ffffff !important;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block !important; }
+
+    h2 { margin-top: 0; color: #c55a11; display: flex; justify-content: space-between; align-items: center; font-size: 22px; flex-wrap: wrap; gap: 10px; }
+    .section-title {
+      font-weight: bold; margin-top: 20px; margin-bottom: 12px; color: #1f497d; font-size: 16px;
+      border-left: 4px solid #1f497d; padding-left: 8px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-add { background: #28a745; color: white; }
+    .btn-add:hover { background: #218838; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-danger:hover { background: #c82333; }
+    .btn-primary { background: #007bff; color: white; }
+    .btn-primary:hover { background: #0056b3; }
+
+    .price-market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .price-item { display: flex; flex-direction: column; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; position: relative; }
+    .price-item label { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
+    .mat-del-btn { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #dc3545; font-size: 14px; cursor: pointer; }
+
+    select, input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; outline: none; background: #fff; }
+
+    .product-select-box { background: rgba(255, 255, 255, 0.95); border: 2px solid #c55a11; padding: 15px; border-radius: 12px; margin-top: 15px; }
+    .recipe-list-box { margin-top: 10px; background: rgba(240, 244, 248, 0.9); padding: 12px; border-radius: 8px; font-size: 14px; }
+    .recipe-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #ccc; }
+
+    .card-result { background: rgba(255, 248, 230, 0.95); border-left: 6px solid #ffc000; padding: 20px; border-radius: 10px; margin-top: 20px; }
+    .result-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; }
+    .result-row.total { font-size: 18px; font-weight: bold; color: #c55a11; }
+    .result-row.profit { font-size: 20px; font-weight: bold; border-top: 1px dashed #d9b26a; padding-top: 10px; margin-top: 10px; }
+
+    .product-manage-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+    .product-manage-info { display: flex; flex-direction: column; flex: 1; }
+    .product-manage-title { font-weight: bold; font-size: 16px; color: #1f497d; }
+    .product-manage-sub { font-size: 12px; color: #666; margin-top: 2px; }
+    .product-manage-actions { display: flex; gap: 6px; }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(3px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: #ffffff;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .bg-setting-panel { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 13px; border: 1px solid rgba(0,0,0,0.1); }
+    .bg-thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .bg-thumb-item { position: relative; width: 80px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; background: #ddd; }
+    .bg-thumb-item.active { border-color: #c55a11; }
+    .bg-thumb-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+    .bg-thumb-del { position: absolute; top: 2px; right: 2px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    .exp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 18px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      margin-bottom: 15px;
+    }
+    @media (max-width: 650px) {
+      .exp-grid { grid-template-columns: 1fr; }
+    }
+    .exp-field { display: flex; flex-direction: column; gap: 5px; }
+    .exp-field label { font-size: 13px; font-weight: bold; color: #333; }
+    .drop-item-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }
+    .mode-card:has(input:checked) {
+      border-color: #c55a11 !important;
+      background: linear-gradient(180deg, #fff8f0 0%, #fff 100%) !important;
+      box-shadow: 0 4px 12px rgba(197,90,17,0.18);
+    }
+    .mode-card input[type="radio"] {
+      accent-color: #c55a11;
+    }
+  </style>
 </head>
-<body class="bg-ph-black text-slate-200 min-h-screen p-3 md:p-6 font-sans select-none">
-  <div id="app" class="max-w-6xl mx-auto space-y-4">
-    <!-- 頂部導覽列 -->
-    <header class="bg-ph-card border border-ph-border rounded-2xl p-4 flex justify-between items-center shadow-2xl">
-      <div class="flex items-center space-x-3">
-        <div class="flex items-center text-xl md:text-2xl select-none" style="font-family: 'Montserrat', Arial, sans-serif;">
-          <span class="text-white font-black tracking-tight pr-1">Bossraid</span>
-          <span class="bg-ph-orange text-black font-black tracking-tight px-2 py-0.5 rounded-md leading-none flex items-center">hub</span>
-        </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <span class="text-xs bg-ph-surface text-ph-orange border border-ph-orange/30 px-2 py-0.5 rounded font-mono font-bold">
-              {{ currentWeekKey === 'thisWeek' ? '本週 ' + weekRangeTexts.thisWeek : '下週 ' + weekRangeTexts.nextWeek }}
-            </span>
-            <span class="text-[10px] flex items-center gap-1 font-mono" :class="syncStatus.color">
-              <span class="w-2 h-2 rounded-full animate-pulse" :class="syncStatus.bg"></span>
-              {{ syncStatus.text }}
-            </span>
-          </div>
-          <p class="text-[11px] text-slate-400">組隊・刷王・動態週期出勤統計（每週二 00:00 重置）</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <button @click="forceCycleShift" title="把下週報名名單直接推進為本週" class="text-xs bg-ph-surface hover:bg-ph-border text-slate-300 font-bold px-3 py-2 rounded-xl border border-ph-border flex items-center gap-1.5 transition">
-          <i class="fa-solid fa-arrows-rotate text-ph-orange"></i> 手動推進週次
-        </button>
-        <button @click="openAddModal" class="text-xs bg-ph-orange hover:bg-ph-hover text-black font-black px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow">
-          <i class="fa-solid fa-user-plus"></i> 登記新角色
-        </button>
-      </div>
-    </header>
-    <!-- 分頁 Tab -->
-    <nav class="flex space-x-2 bg-ph-card p-1.5 rounded-xl border border-ph-border text-xs">
-      <button 
-        @click="switchTab('signup')"
-        :class="currentTab === 'signup' ? 'bg-ph-orange text-black font-black' : 'text-slate-400 hover:text-white'"
-        class="px-4 py-2 rounded-lg transition flex items-center gap-1.5 font-bold"
-      >
-        <i class="fa-regular fa-calendar-check"></i> 每週報名
-      </button>
-      <button 
-        @click="switchTab('list')"
-        :class="currentTab === 'list' ? 'bg-ph-orange text-black font-black' : 'text-slate-400 hover:text-white'"
-        class="px-4 py-2 rounded-lg transition flex items-center gap-1.5 font-bold"
-      >
-        <i class="fa-solid fa-list-check"></i> 報名名單
-      </button>
-      <button 
-        @click="switchTab('schedule')"
-        :class="currentTab === 'schedule' ? 'bg-ph-orange text-black font-black' : 'text-slate-400 hover:text-white'"
-        class="px-4 py-2 rounded-lg transition flex items-center gap-1.5 font-bold"
-      >
-        <i class="fa-solid fa-clock"></i> 活動時間軸
-      </button>
-    </nav>
-    <!-- 分頁 1: 每週報名 -->
-    <main v-if="currentTab === 'signup'" class="space-y-4">
-      <div class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow-2xl space-y-6">
-        <div class="border-b border-ph-border pb-3 flex justify-between items-center">
-          <div>
-            <h2 class="text-base font-bold text-white flex items-center gap-2">
-              <i class="fa-regular fa-calendar-plus text-ph-orange"></i> 每週快速報名
-            </h2>
-            <p class="text-xs text-slate-400 mt-1">選定週次後儲存，每週二自動將下週資料輪替為當週</p>
-          </div>
-          <button @click="openAddModal" class="text-xs text-ph-orange hover:underline font-bold">+ 登記新角色</button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- 選擇角色與刪除角色按鈕 -->
-          <div>
-            <div class="flex justify-between items-center mb-1.5">
-              <label class="text-xs font-bold text-slate-300">選擇角色</label>
-              <button 
-                v-if="selectedUser" 
-                @click="deletePermanentMember(selectedUser)"
-                class="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1 transition font-bold"
-                title="永久刪除此角色"
-              >
-                <i class="fa-solid fa-trash"></i> 永久註銷此角色
-              </button>
-            </div>
-            <div class="flex gap-2 items-center">
-              <select v-model="selectedUser" @change="onUserOrWeekChange" class="flex-1 bg-ph-surface border border-ph-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-ph-orange">
-                <option value="" disabled>請選擇您的角色...</option>
-                <option v-for="u in membersList" :key="u.id" :value="u.id">{{ u.name + ' [' + u.job + ' Lv.' + u.level + ']' }}</option>
-              </select>
-              <button 
-                @click="deletePermanentMember(selectedUser)" 
-                :disabled="!selectedUser"
-                title="刪除所選角色"
-                class="h-[42px] px-3.5 bg-red-950/40 hover:bg-red-900/60 disabled:opacity-30 disabled:cursor-not-allowed border border-red-800 text-red-300 rounded-xl flex items-center justify-center transition"
-              >
-                <i class="fa-solid fa-trash text-sm"></i>
-              </button>
-            </div>
-          </div>
-          <!-- 選擇週次 -->
-          <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5">選擇欲報名的週次</label>
-            <div class="flex gap-2">
-              <button 
-                @click="setSignupWeek('thisWeek')"
-                :class="currentWeekKey === 'thisWeek' ? 'border-ph-orange bg-ph-orange/15 text-ph-orange font-black shadow' : 'border-ph-border bg-ph-surface text-slate-400 hover:text-white'"
-                class="flex-1 py-2.5 text-xs rounded-xl border transition font-mono"
-              >
-                本週 {{ weekRangeTexts.thisWeek }}
-              </button>
-              <button 
-                @click="setSignupWeek('nextWeek')"
-                :class="currentWeekKey === 'nextWeek' ? 'border-ph-orange bg-ph-orange/15 text-ph-orange font-black shadow' : 'border-ph-border bg-ph-surface text-slate-400 hover:text-white'"
-                class="flex-1 py-2.5 text-xs rounded-xl border transition font-mono"
-              >
-                下週 {{ weekRangeTexts.nextWeek }}
-              </button>
-            </div>
-          </div>
-        </div>
-        <!-- 副本選擇 -->
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <label class="text-xs font-bold text-slate-300">
-              副本報名（每週最多 2 次）- <span class="text-ph-orange">{{ currentWeekKey === 'thisWeek' ? '登記在本週' : '登記在下週' }}</span>
-            </label>
-            <span class="text-xs font-mono font-bold" :class="selectedBosses.length === 2 ? 'text-ph-orange' : 'text-slate-500'">已選 {{ selectedBosses.length }}/2</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div 
-              v-for="b in bosses" :key="b.id" 
-              @click="toggleBoss(b.name)"
-              :class="selectedBosses.includes(b.name) ? 'border-ph-orange bg-ph-orange/10' : 'border-ph-border bg-ph-surface hover:border-slate-500'"
-              class="p-4 border rounded-xl flex items-center justify-between cursor-pointer transition select-none"
-            >
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">{{ b.icon }}</span>
-                <span class="text-sm font-bold text-slate-100">{{ b.name }}</span>
-              </div>
-              <span :class="selectedBosses.includes(b.name) ? 'bg-ph-orange text-black font-black' : 'bg-ph-card text-slate-400 border border-ph-border'" class="text-xs px-3 py-1 rounded-md transition font-medium">
-                {{ selectedBosses.includes(b.name) ? '已報名' : '未報名' }}
-              </span>
-            </div>
-          </div>
-        </div>
-        <button @click="submitSignup" :disabled="!selectedUser || selectedBosses.length === 0" class="w-full py-3 bg-ph-orange hover:bg-ph-hover disabled:bg-ph-surface disabled:text-slate-600 text-black text-sm font-black rounded-xl transition shadow-lg">
-          確認報名 {{ currentWeekKey === 'thisWeek' ? '【本週】' : '【下週】' }}
-        </button>
-      </div>
-      <!-- 未報名角色統計欄位 -->
-      <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- 本週未報名區塊 -->
-        <div class="bg-ph-card border border-ph-border rounded-2xl p-4 shadow-xl">
-          <div class="flex items-center justify-between border-b border-ph-border pb-2.5 mb-3">
-            <div class="flex items-center gap-2">
-              <i class="fa-solid fa-circle-exclamation text-amber-500"></i>
-              <h3 class="text-xs font-bold text-white">本週未報名角色 <span class="text-slate-400 font-mono">({{ unregisteredThisWeek.length }} 人)</span></h3>
-            </div>
-            <span class="text-[10px] text-slate-500 font-mono">{{ weekRangeTexts.thisWeek }}</span>
-          </div>
-          <div v-if="unregisteredThisWeek.length === 0" class="text-center py-4 text-xs text-emerald-400 font-bold flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-circle-check"></i> 本週全員皆已完成副本報名！
-          </div>
-          <div v-else class="flex flex-wrap gap-2">
-            <div 
-              v-for="m in unregisteredThisWeek" 
-              :key="m.id" 
-              @click="quickSelectUser(m.id, 'thisWeek')"
-              title="點擊快速報名本週"
-              class="bg-ph-surface border border-ph-border hover:border-ph-orange p-2 rounded-xl flex items-center justify-between gap-3 text-xs cursor-pointer transition group"
-            >
-              <div>
-                <span class="font-bold text-white group-hover:text-ph-orange transition">{{ m.name }}</span>
-                <span class="text-[10px] text-slate-400 ml-1">[{{ m.job }}]</span>
-              </div>
-              <span class="text-[10px] text-ph-orange bg-ph-orange/10 px-2 py-0.5 rounded font-bold border border-ph-orange/20">點此報名</span>
-            </div>
-          </div>
-        </div>
-        <!-- 下週未報名區塊 -->
-        <div class="bg-ph-card border border-ph-border rounded-2xl p-4 shadow-xl">
-          <div class="flex items-center justify-between border-b border-ph-border pb-2.5 mb-3">
-            <div class="flex items-center gap-2">
-              <i class="fa-solid fa-clock text-amber-500"></i>
-              <h3 class="text-xs font-bold text-white">下週未報名角色 <span class="text-slate-400 font-mono">({{ unregisteredNextWeek.length }} 人)</span></h3>
-            </div>
-            <span class="text-[10px] text-slate-500 font-mono">{{ weekRangeTexts.nextWeek }}</span>
-          </div>
-          <div v-if="unregisteredNextWeek.length === 0" class="text-center py-4 text-xs text-emerald-400 font-bold flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-circle-check"></i> 下週全員皆已完成副本報名！
-          </div>
-          <div v-else class="flex flex-wrap gap-2">
-            <div 
-              v-for="m in unregisteredNextWeek" 
-              :key="m.id" 
-              @click="quickSelectUser(m.id, 'nextWeek')"
-              title="點擊快速報名下週"
-              class="bg-ph-surface border border-ph-border hover:border-ph-orange p-2 rounded-xl flex items-center justify-between gap-3 text-xs cursor-pointer transition group"
-            >
-              <div>
-                <span class="font-bold text-white group-hover:text-ph-orange transition">{{ m.name }}</span>
-                <span class="text-[10px] text-slate-400 ml-1">[{{ m.job }}]</span>
-              </div>
-              <span class="text-[10px] text-ph-orange bg-ph-orange/10 px-2 py-0.5 rounded font-bold border border-ph-orange/20">點此報名</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-    <!-- 分頁 2: 報名名單與出勤狀態 -->
-    <main v-if="currentTab === 'list'" class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow-2xl space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-ph-border pb-4">
-        <div>
-          <div class="flex items-center gap-2">
-            <h2 class="text-base font-bold text-white flex items-center gap-2">
-              <i class="fa-solid fa-list-ol text-ph-orange"></i> 報名名單
-            </h2>
-            <span class="text-xs text-black bg-ph-orange font-black px-2 py-0.5 rounded-full font-mono">({{ filteredList.length }} 人)</span>
-            <div class="inline-flex bg-ph-surface rounded-lg p-0.5 border border-ph-border ml-2">
-              <button @click="currentWeekKey = 'thisWeek'" :class="currentWeekKey === 'thisWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">本週名單</button>
-              <button @click="currentWeekKey = 'nextWeek'" :class="currentWeekKey === 'nextWeek' ? 'bg-ph-orange text-black font-bold' : 'text-slate-400'" class="px-2.5 py-1 text-xs rounded transition">下週名單</button>
-            </div>
-          </div>
-          <p class="text-xs text-slate-400 mt-1">目前檢視：<span class="text-ph-orange font-bold">{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}</span>（每週二自動結算輪替）</p>
-        </div>
-      </div>
-      <!-- 副本圖示切換列 -->
-      <div class="flex flex-wrap gap-2 pt-1 pb-1">
-        <button 
-          @click="filterBoss = 'all'"
-          :class="filterBoss === 'all' ? 'bg-ph-orange text-black font-black border-ph-orange shadow-md' : 'bg-ph-surface text-slate-400 border-ph-border hover:border-slate-500 hover:text-white'"
-          class="px-3.5 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
-        >
-          <i class="fa-solid fa-layer-group text-sm"></i>
-          <span>所有副本 ({{ bossCounts.all }})</span>
-        </button>
-        <button 
-          v-for="b in bosses" :key="b.id"
-          @click="filterBoss = b.name"
-          :class="filterBoss === b.name ? 'bg-ph-orange text-black font-black border-ph-orange shadow-md' : 'bg-ph-surface text-slate-300 border-ph-border hover:border-slate-500 hover:text-white'"
-          class="px-3 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
-        >
-          <span class="text-base leading-none">{{ b.icon }}</span>
-          <span class="font-bold">{{ b.name }} ({{ bossCounts[b.name] || 0 }})</span>
-        </button>
-      </div>
-      <!-- 出勤勾選表格 -->
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[850px]">
-          <thead>
-            <tr class="border-b border-ph-border text-[11px] text-slate-400">
-              <th class="py-3 px-3 w-44">成員資訊</th>
-              <th class="py-3 px-3 w-40">報名副本</th>
-              <th v-for="day in activeDays" :key="day.fullDate" class="py-3 px-2 text-center">
-                <div class="font-bold text-white">週{{ day.label }}</div>
-                <div class="text-[10px] text-slate-500 font-mono">{{ day.monthDay }}</div>
-              </th>
-              <th class="py-3 px-3 w-56 text-ph-orange font-bold">可出勤時段備註</th>
-              <th class="py-3 px-3 text-center w-24">操作</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-ph-border/60 text-xs">
-            <tr v-if="filteredList.length === 0">
-              <td colspan="11" class="text-center py-8 text-slate-500">
-                【{{ currentWeekKey === 'thisWeek' ? '本週' : '下週' }}】尚無符合此副本的成員報名！
-              </td>
-            </tr>
-            <tr v-for="item in filteredList" :key="item.memberId" class="hover:bg-ph-surface/50 transition">
-              <td class="py-3 px-3">
-                <div class="font-bold text-white text-sm tracking-wide">{{ item.name }}</div>
-                <div class="flex gap-1.5 mt-1">
-                  <span class="text-[10px] px-2 py-0.5 rounded bg-ph-surface border border-ph-border text-ph-orange font-bold">{{ item.job }}</span>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-black/50 text-slate-400 font-mono">LV.{{ item.level }}</span>
-                </div>
-              </td>
-              <td class="py-3 px-3">
-                <div class="flex flex-col gap-1">
-                  <div v-for="bossName in getBossArray(item.boss)" :key="bossName" class="flex items-center gap-1.5 font-bold text-slate-200">
-                    <span class="text-base leading-none">{{ getBossIcon(bossName) }}</span>
-                    <span>{{ bossName }}</span>
-                  </div>
-                </div>
-              </td>
-              <td v-for="(available, dayIdx) in item.availability" :key="dayIdx" class="py-3 px-2 text-center">
-                <button 
-                  @click="toggleDay(item, dayIdx)"
-                  title="點擊切換出席"
-                  :class="available ? 'bg-ph-orange text-black border-ph-orange shadow-md scale-105' : 'bg-ph-surface border-ph-border text-slate-600 hover:border-slate-400'"
-                  class="w-7 h-7 rounded-lg border text-xs font-black inline-flex items-center justify-center transition"
-                >
-                  <i v-if="available" class="fa-solid fa-check"></i>
-                  <span v-else>•</span>
-                </button>
-              </td>
-              <td class="py-3 px-2">
-                <textarea 
-                  :value="item.note" 
-                  @input="updateMemberNote(item.memberId, $event.target.value)"
-                  rows="2"
-                  placeholder="例：週三四21點後、週末全天" 
-                  class="w-full bg-ph-surface border border-ph-border rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-ph-orange resize-none leading-tight"
-                ></textarea>
-              </td>
-              <td class="py-3 px-3 text-center">
-                <div class="flex items-center justify-center gap-1.5">
-                  <button @click="openEditModal(item)" title="編輯此角色" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-ph-border text-sky-400 border border-ph-border flex items-center justify-center transition">
-                    <i class="fa-solid fa-pen text-[11px]"></i>
-                  </button>
-                  <button @click="deleteFromCurrentWeek(item.memberId)" title="自當前週名單移除" class="w-7 h-7 rounded-lg bg-ph-surface hover:bg-red-900/40 text-red-400 border border-ph-border hover:border-red-600 flex items-center justify-center transition">
-                    <i class="fa-solid fa-trash text-[11px]"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </main>
+<body>
 
-    <!-- 分頁 3: 活動時間軸（Google 日曆風格時間條） -->
-    <main v-if="currentTab === 'schedule'" class="space-y-4">
-      <div class="bg-ph-card border border-ph-border rounded-2xl p-5 shadow-2xl space-y-5">
-        <div class="border-b border-ph-border pb-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-          <div>
-            <h2 class="text-base font-bold text-white flex items-center gap-2">
-              <i class="fa-solid fa-clock text-ph-orange"></i> 活動 &amp; 商城時間軸
-            </h2>
-            <p class="text-xs text-slate-400 mt-1">更新：{{ scheduleUpdatedAt }}　｜　橘色＝3天內到期</p>
-          </div>
-          <div class="text-[10px] text-slate-500 font-mono bg-ph-surface px-2.5 py-1 rounded-lg border border-ph-border">
-            今日 {{ todayLabel }}
-          </div>
-        </div>
+<div id="cloudSyncStatus">☁ 雲端同步中...</div>
 
-        <!-- ===== 活動更新 ===== -->
-        <div>
-          <h3 class="text-sm font-bold text-ph-orange mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-calendar-days"></i> 活動更新
-          </h3>
-          <div v-if="eventItems.length === 0" class="text-center py-4 text-slate-500 text-xs">目前沒有進行中的活動</div>
-          <div class="space-y-3">
-            <div v-for="item in eventItems" :key="item.id"
-                 class="bg-ph-surface border rounded-xl p-3.5 transition"
-                 :class="item.daysLeft <= 3 ? 'border-ph-orange/50' : 'border-ph-border'">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
-                <div class="flex items-start gap-2.5 min-w-0">
-                  <span class="text-lg shrink-0">{{ item.icon }}</span>
-                  <div class="min-w-0">
-                    <div class="text-sm font-bold text-white truncate">{{ item.title }}</div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">{{ item.desc }}</div>
-                  </div>
-                </div>
-                <div class="text-right shrink-0 flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
-                  <span class="text-[10px] px-2 py-0.5 rounded font-bold"
-                        :class="item.daysLeft <= 0 ? 'bg-red-900/50 text-red-300' : item.daysLeft <= 3 ? 'bg-ph-orange/20 text-ph-orange' : 'bg-emerald-900/40 text-emerald-400'">
-                    {{ item.daysLeft <= 0 ? '已結束' : '剩 ' + item.daysLeft + ' 天' }}
-                  </span>
-                  <span class="text-[10px] text-slate-500 font-mono">{{ item.endLabel }}</span>
-                </div>
-              </div>
-              <div class="relative h-1.5 bg-slate-600/80 rounded-full mt-0.5">
-                <div class="absolute inset-y-0 left-0 rounded-full bg-ph-orange transition-all"
-                     :style="{ width: item.progressPct + '%' }"></div>
-                <div class="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow border border-white/20 z-10"
-                     :style="{ left: 'calc(' + item.todayPct + '% - 7px)' }"
-                     title="今天"></div>
-              </div>
-              <div class="flex justify-between mt-1 text-[9px] text-slate-500 font-mono">
-                <span>{{ item.startLabel }}</span>
-                <span>{{ item.endLabel }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+<div class="full-side-bg full-side-left" id="fullSideLeft"></div>
+<div class="full-side-bg full-side-right" id="fullSideRight"></div>
 
-        <!-- ===== 購物商城 ===== -->
-        <div class="border-t border-ph-border pt-4">
-          <h3 class="text-sm font-bold text-ph-orange mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-store"></i> 購物商城
-          </h3>
-          <div v-if="shopItems.length === 0" class="text-center py-4 text-slate-500 text-xs">目前沒有限時禮包</div>
-          <div class="space-y-3">
-            <div v-for="item in shopItems" :key="item.id"
-                 class="bg-ph-surface border rounded-xl p-3.5 transition"
-                 :class="item.daysLeft <= 3 ? 'border-ph-orange/50' : 'border-ph-border'">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
-                <div class="flex items-start gap-2.5 min-w-0">
-                  <span class="text-lg shrink-0">{{ item.icon }}</span>
-                  <div class="min-w-0">
-                    <div class="text-sm font-bold text-white truncate">{{ item.title }}</div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">{{ item.desc }}</div>
-                  </div>
-                </div>
-                <div class="text-right shrink-0 flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
-                  <span class="text-[10px] px-2 py-0.5 rounded font-bold"
-                        :class="item.daysLeft <= 0 ? 'bg-red-900/50 text-red-300' : item.daysLeft <= 3 ? 'bg-ph-orange/20 text-ph-orange' : 'bg-emerald-900/40 text-emerald-400'">
-                    {{ item.daysLeft <= 0 ? '已結束' : '剩 ' + item.daysLeft + ' 天' }}
-                  </span>
-                  <span class="text-[10px] text-slate-500 font-mono">{{ item.endLabel }}</span>
-                </div>
-              </div>
-              <div class="relative h-1.5 bg-slate-600/80 rounded-full mt-0.5">
-                <div class="absolute inset-y-0 left-0 rounded-full bg-ph-orange transition-all"
-                     :style="{ width: item.progressPct + '%' }"></div>
-                <div class="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow border border-white/20 z-10"
-                     :style="{ left: 'calc(' + item.todayPct + '% - 7px)' }"
-                     title="今天"></div>
-              </div>
-              <div class="flex justify-between mt-1 text-[9px] text-slate-500 font-mono">
-                <span>{{ item.startLabel }}</span>
-                <span>{{ item.endLabel }}</span>
-              </div>
-              <!-- 禮包內容物（可折疊） -->
-              <div v-if="item.contents && item.contents.length" class="mt-2.5 pt-2 border-t border-ph-border/40">
-                <button @click="toggleContents(item.id)"
-                        class="flex items-center gap-1.5 text-[11px] text-sky-400 hover:text-sky-300 font-bold transition">
-                  <i class="fa-solid text-[10px]" :class="expandedContents[item.id] ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-                  {{ expandedContents[item.id] ? '收起內容物' : '查看內容物（' + item.contents.length + '）' }}
-                </button>
-                <ul v-show="expandedContents[item.id]" class="mt-2 space-y-1 pl-1">
-                  <li v-for="(c, ci) in item.contents" :key="ci"
-                      class="text-[11px] text-slate-300 flex items-center gap-1.5">
-                    <span class="text-ph-orange font-mono shrink-0">×{{ c.qty }}</span>
-                    <span>{{ c.name }}</span>
-                    <span v-if="c.note" class="text-slate-500 text-[10px]">（{{ c.note }}）</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
+<div class="side-gallery side-left">
+  <img id="leftGalleryImg" src="" alt="左側直版相冊">
+</div>
+<div class="side-gallery side-right">
+  <img id="rightGalleryImg" src="" alt="右側直版相冊">
+</div>
 
-        <!-- Coming Soon -->
-        <div v-if="soonItems.length > 0" class="border-t border-ph-border pt-4">
-          <h3 class="text-sm font-bold text-violet-400 mb-2.5 flex items-center gap-2">
-            <i class="fa-solid fa-bullhorn"></i> Coming Soon
-          </h3>
-          <div class="space-y-2">
-            <div v-for="item in soonItems" :key="item.id"
-                 class="bg-ph-surface/70 border border-ph-border rounded-xl px-3.5 py-2.5 flex items-center gap-2.5">
-              <span class="text-lg">{{ item.icon }}</span>
-              <div>
-                <div class="text-sm font-bold text-white">{{ item.title }}</div>
-                <div class="text-[11px] text-slate-400">{{ item.desc }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+<div class="top-banner-gallery">
+  <img id="topBannerImg" src="" alt="頂部橫版相冊">
+</div>
 
-        <!-- 注意事項 -->
-        <div class="bg-ph-surface/60 border border-ph-border rounded-xl p-3.5 text-xs text-slate-400 space-y-1.5">
-          <div class="font-bold text-slate-300 mb-1"><i class="fa-solid fa-circle-info text-ph-orange mr-1"></i> 提醒</div>
-          <p v-for="(n, i) in scheduleNotes" :key="'n'+i">• {{ n }}</p>
+<div class="container" id="mainContainer">
+  <h2>
+    <span>🍁 楓之谷成本計算機</span>
+  </h2>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
+    <button class="tab-btn" data-tab="tabContent-exp">📊 經驗與打怪效率計算機 (本地獨立運算)</button>
+    <button class="tab-btn" data-tab="tabContent-scroll">📜 衝卷成本計算</button>
+    <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
+    <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
+    <button class="tab-btn" data-tab="tabContent-dpm">⚔️ DPM 傷害計算機</button>
+    <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
+  </div>
+
+  <div id="tabContent-calc" class="tab-content active">
+    <div class="section-title">
+      <span>1. 輸入基礎「母礦」或「打怪雜物」單價 (即時連動更新)</span>
+      <button class="btn-sm btn-add" id="btnAddRawMat">➕ 新增母礦/打怪雜物</button>
+    </div>
+    <div class="price-market-grid" id="marketPriceGrid"></div>
+
+    <div class="section-title"><span>2. 選擇欲製作的成品 / 裝備 / 合成物與測試市場價格</span></div>
+    <div class="product-select-box">
+      <label style="font-weight:bold; font-size:15px; color:#c55a11; display:block; margin-bottom:8px;">選擇項目：</label>
+      <select id="productSelect" style="font-size:16px; padding:10px; font-weight:bold;"></select>
+      
+      <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
+        <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷️ 當前市場售價 / 最低價：</span>
+        <input type="text" id="inlineMarketPrice" class="comma-input" placeholder="請手動輸入要測試的拍賣售價" style="font-weight: bold; color: #c55a11;">
+      </div>
+
+      <div class="recipe-list-box" id="recipeDetailsBox"></div>
+    </div>
+
+    <div class="card-result">
+      <div class="result-row total"><span>總製作成本：</span><span id="totalCost">0 楓幣</span></div>
+      <div class="result-row"><span>扣除 3% 交易稅後淨收 (拍賣會員)：</span><span id="netIncome3pct">0 楓幣</span></div>
+      <div class="result-row"><span>扣除 5% 交易稅後淨收：</span><span id="netIncome5pct">0 楓幣</span></div>
+      <hr style="border:0; border-top:1px dashed #d9b26a; margin:10px 0;">
+      <div class="result-row profit"><span>預期純利潤 (以 3% 計算)：</span><span id="profit3pct">0 楓幣</span></div>
+      <div class="result-row profit"><span>預期純利潤 (以 5% 計算)：</span><span id="profit5pct">0 楓幣</span></div>
+      <div id="profitAdvice3" style="font-size: 13px; margin-top: 8px; font-weight: bold;"></div>
+      <div id="profitAdvice5" style="font-size: 13px; margin-top: 4px; font-weight: bold;"></div>
+    </div>
+  </div>
+
+  <!-- 經驗與打怪效率計算機頁面 (完全本地運算，多人使用互不干擾) -->
+  <div id="tabContent-exp" class="tab-content">
+    <div class="section-title">
+      <span>👥 多人分頁／名稱管理 (本地獨立計算，絕不互相拉走畫面)</span>
+      <div style="display:flex; gap:6px;">
+        <button class="btn-sm btn-add" id="btnAddExpTab">➕ 新增本地分頁</button>
+        <button class="btn-sm btn-danger" id="btnDelExpTab">🗑️ 刪除當前分頁</button>
+      </div>
+    </div>
+    <div id="expTabsList" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:15px; background:rgba(0,0,0,0.04); padding:10px; border-radius:8px;"></div>
+
+    <div style="background:rgba(255,255,255,0.95); padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #ddd; display:flex; gap:10px; align-items:center;">
+      <div style="display:flex; flex-direction:column; white-space:nowrap;">
+        <label style="font-weight:bold; font-size:13px; color:#1f497d;">✏️ 名稱：</label>
+        <span style="font-size:11px; color:#666; font-weight:bold;">（隨便填）</span>
+      </div>
+      <input type="text" id="expSubTabAuthor" placeholder="例如：小明的測試區" style="flex:1; font-weight:bold; color:#1f497d;">
+      <button class="btn-sm btn-primary" id="btnClearExpNumbers" style="background:#f0ad4e;">🧹 清空數字（保留尾巴觸角名稱與單價）</button>
+    </div>
+
+    <div class="section-title"><span>⏱️ 1. 測試時間區間</span></div>
+    <div class="exp-grid">
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label>測試時間 (分鐘)：</label>
+        <input type="number" id="expTestMinutes" class="comma-input" value="60" placeholder="例如：60" style="font-size: 15px; font-weight: bold; color: #c55a11;">
+      </div>
+    </div>
+
+    <div class="section-title"><span>📈 2. 經驗值與楓幣統計</span></div>
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>開始經驗值：</label>
+        <input type="text" id="expStart" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>結束經驗值：</label>
+        <input type="text" id="expEnd" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>開始楓幣：</label>
+        <input type="text" id="mesosStart" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>結束楓幣 (自身獲得楓幣)：</label>
+        <input type="text" id="mesosEnd" class="comma-input" value="0">
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>🎒 3. 掉落物統計與收益 (自動計入楓幣收入)</span>
+      <button class="btn-sm btn-add" id="btnAddDropItem">➕ 新增掉落物項目</button>
+    </div>
+    <div style="font-size:12px; color:#555; margin-bottom:8px; background:rgba(255,255,255,0.75); padding:6px 12px; border-radius:6px; border:1px dashed #ccc;">
+      💡 開始數量預設為 0，可不填（代表原本背包沒有此物）
+    </div>
+    <div id="dropItemsContainer" style="margin-bottom: 15px;"></div>
+
+    <div class="exp-grid" style="margin-bottom: 15px;">
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label>⚔️ 掉落武器數量 (每件固定 400,000 楓幣)：</label>
+        <input type="text" id="dropWeaponQty" class="comma-input" value="0">
+      </div>
+    </div>
+
+    <div class="section-title"><span>🧪 4. 消耗品開銷統計</span></div>
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>使用 HP水 單價：</label>
+        <input type="text" id="hpPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>HP水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="hpStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="hpEnd" class="comma-input" value="0" placeholder="結束">
         </div>
       </div>
-    </main>
 
-    <!-- 登記 / 編輯角色彈窗 -->
-    <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-ph-card border border-ph-border rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
-        <div class="flex justify-between items-center border-b border-ph-border pb-3">
-          <h3 class="font-bold text-white text-base flex items-center gap-2">
-            <span class="bg-ph-orange text-black px-1.5 py-0.5 rounded text-xs font-black">{{ isEditMode ? 'EDIT' : 'NEW' }}</span>
-            {{ isEditMode ? '編輯角色資料' : '登記新角色' }}
-          </h3>
-          <button @click="showModal = false" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <div class="exp-field">
+        <label>使用 MP水 單價：</label>
+        <input type="text" id="mpPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>MP水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="mpStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="mpEnd" class="comma-input" value="0" placeholder="結束">
         </div>
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-300 mb-1">角色 ID / 暱稱</label>
-            <input v-model="form.name" type="text" placeholder="輸入遊戲 ID" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-300 mb-1">職業</label>
-            <input v-model="form.job" type="text" placeholder="例如：主教、夜使者、英雄" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-300 mb-1">等級 (Lv)</label>
-            <input v-model.number="form.level" type="number" placeholder="例如：160" class="w-full bg-ph-surface border border-ph-border rounded-xl p-2.5 text-white focus:outline-none focus:border-ph-orange">
-          </div>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button @click="showModal = false" class="flex-1 py-2.5 bg-ph-surface text-slate-300 rounded-xl font-bold hover:bg-ph-border transition">取消</button>
-          <button @click="saveMember" class="flex-1 py-2.5 bg-ph-orange hover:bg-ph-hover text-black rounded-xl font-black transition">確認儲存</button>
+      </div>
+
+      <div class="exp-field">
+        <label>使用 櫻桃派/超水 單價：</label>
+        <input type="text" id="cherryPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>櫻桃派/超水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="cherryStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="cherryEnd" class="comma-input" value="0" placeholder="結束">
         </div>
       </div>
     </div>
+
+    <div class="card-result">
+      <div class="result-row"><span>總獲得經驗值：</span><span id="resTotalExp" style="font-weight:bold; color:#1f497d;">0</span></div>
+      <div class="result-row"><span>打怪楓幣淨收益 (+掉落物+武器 - 藥水開銷)：</span><span id="resTotalMesos" style="font-weight:bold; color:#c55a11;">0 楓幣</span></div>
+      <hr style="border:0; border-top:1px dashed #d9b26a; margin:10px 0;">
+      <div class="result-row"><span>⏱️ 平均每 10 分鐘經驗值：</span><span id="resExp10m" style="font-weight:bold;">0</span></div>
+      <div class="result-row"><span>⏱️ 平均每 10 分鐘楓幣淨收益：</span><span id="resMesos10m" style="font-weight:bold;">0 楓幣</span></div>
+      <div class="result-row profit"><span>🚀 平均每 1 小時經驗值：</span><span id="resExp1h" style="color:#1f497d;">0</span></div>
+      <div class="result-row profit"><span>💰 平均每 1 小時楓幣淨收益：</span><span id="resMesos1h" style="color:#c55a11;">0 楓幣</span></div>
+    </div>
   </div>
-  <script>
-    const { createApp, ref, computed, onMounted } = Vue;
-    const firebaseConfig = {
-      apiKey: "AIzaSyAHcLAW64sSuz_ZzTRWTgR-GsghnldhiAI",
-      authDomain: "bossraid-hub.firebaseapp.com",
-      databaseURL: "https://bossraid-hub-default-rtdb.firebaseio.com",
-      projectId: "bossraid-hub",
-      storageBucket: "bossraid-hub.firebasestorage.app",
-      messagingSenderId: "561965613969",
-      appId: "1:561965613969:web:2379999ac7c0524e5d9030"
-    };
-    let rtdb = null;
-    let dbRef = null;
-    try {
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+
+  <!-- 卷軸金字塔衝卷成本計算機 (本地運算) -->
+  <div id="tabContent-scroll" class="tab-content">
+    <div class="section-title"><span>📜 衝卷成本計算</span></div>
+    <div style="margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <label class="mode-card" style="cursor:pointer; background:#fff; border:2px solid #e0e0e0; border-radius:12px; padding:14px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:80px; transition:all 0.2s;">
+        <input type="radio" name="scrollMode" id="modePyramid" value="pyramid" checked style="margin-bottom:6px; transform:scale(1.2);">
+        <div style="font-weight:bold; color:#1f497d; font-size:15px;">金字塔衝法</div>
+        <div style="font-size:12px; color:#777; margin-top:3px; line-height:1.3;">必須依序全部過</div>
+      </label>
+      <label class="mode-card" style="cursor:pointer; background:#fff; border:2px solid #e0e0e0; border-radius:12px; padding:14px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:80px; transition:all 0.2s;">
+        <input type="radio" name="scrollMode" id="modeGroup" value="group" style="margin-bottom:6px; transform:scale(1.2);">
+        <div style="font-weight:bold; color:#c55a11; font-size:15px;">分組過幾張</div>
+        <div style="font-size:12px; color:#777; margin-top:3px; line-height:1.3;">例如前2張10%過2<br>後3張60%過2</div>
+      </label>
+    </div>
+    <div id="scrollModeHint" style="font-size:12px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc; line-height:1.6;">
+      💡 <strong>分組模式</strong>的「殘次售價」= 沒達到目標時能賣的價格（例如目標5過4，殘次就填5過3的售價）。<br>
+      期望值是「平均要準備多少才有機會出一件」，低成功率會比較高是正常的。
+    </div>
+
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>基底裝備購買單價：</label>
+        <input type="text" id="scrollBasePrice" class="comma-input" value="0" placeholder="例如：100萬 或 1000000">
+      </div>
+      <div class="exp-field">
+        <label>失敗基底賣商店價格：</label>
+        <input type="text" id="scrollBaseNpcSell" class="comma-input" value="0" placeholder="第一張失敗時賣NPC的價格">
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>卷軸階段設定（從第一張開始）</span>
+      <button class="btn-sm btn-add" id="btnAddScrollStage">➕ 新增階段</button>
+    </div>
+    <div id="scrollStagesContainer" style="margin-bottom:15px;"></div>
+
+    <div class="exp-grid">
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label id="scrollFinalSellLabel">最終成品市場售價：</label>
+        <input type="text" id="scrollFinalSell" class="comma-input" value="0" placeholder="例如：5000萬 或 50000000">
+      </div>
+    </div>
+
+    <div class="card-result" id="scrollResultBox">
+      <div class="result-row"><span>平均每件成品需要基底裝備：</span><span id="scrollNeedBase">0</span></div>
+      <div class="result-row"><span>平均每件成品卷軸總開銷：</span><span id="scrollTotalScrollCost">0 楓幣</span></div>
+      <div class="result-row"><span>平均殘次品/失敗回收收入：</span><span id="scrollResidualIncome">0 楓幣</span></div>
+      <hr style="border:0; border-top:1px dashed #d9b26a; margin:10px 0;">
+      <div class="result-row total"><span>平均淨成本（含回收）：</span><span id="scrollNetCost">0 楓幣</span></div>
+      <div class="result-row"><span>扣除 3% 稅後淨收：</span><span id="scrollNetIncome3">0 楓幣</span></div>
+      <div class="result-row profit"><span>預期純利潤 (3%)：</span><span id="scrollProfit3">0 楓幣</span></div>
+      <div id="scrollAdvice" style="font-size:13px; margin-top:8px; font-weight:bold;"></div>
+    </div>
+  </div>
+
+  <div id="tabContent-manage" class="tab-content">
+    <div class="section-title"><span>成品清單管理 (點擊編輯或刪除)</span></div>
+    <div style="font-size:12px; color:#555; margin-bottom:12px;">
+      💡 提示：點擊右側的筆（編輯）可以修改配方與預設市場價格，點擊垃圾桶則可直接刪除該成品。
+    </div>
+    <div id="productManageList"></div>
+  </div>
+
+  <div id="tabContent-add" class="tab-content">
+    <div class="section-title"><span>➕ 建立新的合成配方或裝備</span></div>
+    <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; border: 1px solid #ddd;">
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight:bold; display:block; margin-bottom:5px;">成品名稱：</label>
+        <input type="text" id="newProdNameInput" placeholder="例如：黃金長劍、高級寶石...">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight:bold; cursor:pointer; color:#c55a11;">
+          <input type="checkbox" id="newProdIsOreCb"> 是否為母礦煉製物 (例如 10個母礦煉成1個)
+        </label>
+      </div>
+      <button class="btn-sm btn-add" id="btnConfirmAddProduct" style="width:100%; padding: 10px; font-size:15px;">確認新增此項目</button>
+    </div>
+  </div>
+
+
+  <!-- DPM 傷害計算機分頁 -->
+  <div id="tabContent-dpm" class="tab-content">
+    <div class="section-title"><span>⚔️ DPM 傷害計算機（本地獨立運算）</span></div>
+    <div style="font-size:13px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc;">
+      參考 Philip 試算表與常見 Artale 公式。結果僅供參考，與遊戲內實際數字可能有差異。
+    </div>
+
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>主屬性</label>
+        <input type="number" id="dpmPrimary" value="1000" min="0">
+      </div>
+      <div class="exp-field">
+        <label>副屬性</label>
+        <input type="number" id="dpmSecondary" value="50" min="0">
+      </div>
+      <div class="exp-field">
+        <label>總攻擊力</label>
+        <input type="number" id="dpmAttack" value="150" min="0">
+      </div>
+      <div class="exp-field">
+        <label>熟練度 (%)</label>
+        <input type="number" id="dpmMastery" value="60" min="0" max="100">
+      </div>
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label>武器類型</label>
+        <select id="dpmWeapon">
+          <option value="4.2,4.2">單手劍 (4.2 / 4.2)</option>
+          <option value="4.8,4.8">雙手劍 (4.8 / 4.8)</option>
+          <option value="4.8,3.6">單手斧 / 棍 (4.8 / 3.6)</option>
+          <option value="5.2,4.0">雙手斧 / 棍 (5.2 / 4.0)</option>
+          <option value="5.2,3.5">矛 (5.2 / 3.5)</option>
+          <option value="5.1,3.6">槍 (5.1 / 3.6)</option>
+          <option value="3.6,3.6">拳套 (3.6 / 3.6)</option>
+          <option value="3.4,3.4">弓 (3.4 / 3.4)</option>
+          <option value="3.6,3.6">弩 (3.6 / 3.6)</option>
+          <option value="4.8,4.8">指虎 (4.8 / 4.8)</option>
+          <option value="3.6,3.6">火槍 (3.6 / 3.6)</option>
+          <option value="2.5,2.5">召喚物 (2.5 / 2.5)</option>
+          <option value="5.25,5.25">雙飛斬 (5.25)</option>
+          <option value="5.26,5.26">三飛閃 (5.26)</option>
+        </select>
+      </div>
+      <div class="exp-field">
+        <label>技能倍率 (%)</label>
+        <input type="number" id="dpmSkill" value="100" min="0">
+      </div>
+      <div class="exp-field">
+        <label>每分鐘命中次數</label>
+        <input type="number" id="dpmHits" value="120" min="1">
+      </div>
+      <div class="exp-field">
+        <label>爆擊機率 (%)</label>
+        <input type="number" id="dpmCritRate" value="0" min="0" max="100">
+      </div>
+      <div class="exp-field">
+        <label>爆擊傷害加成 (%)</label>
+        <input type="number" id="dpmCritDmg" value="50" min="0">
+      </div>
+      <div class="exp-field">
+        <label>最終增傷 (%)</label>
+        <input type="number" id="dpmFinalDmg" value="100" min="0">
+      </div>
+      <div class="exp-field">
+        <label>怪物防禦</label>
+        <input type="number" id="dpmDefense" value="600" min="0">
+      </div>
+      <div class="exp-field">
+        <label>等級差（怪-角色）</label>
+        <input type="number" id="dpmLevelDiff" value="0">
+      </div>
+    </div>
+
+    <div class="card-result">
+      <div class="result-row"><span>表攻範圍：</span><span id="dpmRange" style="font-weight:bold; color:#1f497d;">-</span></div>
+      <div class="result-row"><span>技能傷害範圍：</span><span id="dpmDmg" style="font-weight:bold; color:#c55a11;">-</span></div>
+      <div class="result-row"><span>平均單段傷害：</span><span id="dpmAvg" style="font-weight:bold;">-</span></div>
+      <div class="result-row profit"><span>預估 DPM：</span><span id="dpmResult" style="color:#c55a11;">-</span></div>
+      <div id="dpmCritNote" style="font-size:13px; margin-top:6px; color:#555;"></div>
+    </div>
+
+    <div style="margin-top:12px; font-size:12px; color:#666; background:rgba(255,255,255,0.7); padding:10px; border-radius:8px;">
+      <strong>公式簡述：</strong><br>
+      最大表攻 = ⌊(主屬 × 最大係數 + 副屬) × 攻擊 ÷ 100⌋<br>
+      最小表攻 = ⌊(主屬 × 最小係數 × 0.9 × 熟練度 + 副屬) × 攻擊 ÷ 100⌋<br>
+      防禦採用除算：傷害 × 100 ÷ (防禦 + 100)<br>
+      僅供參考。
+    </div>
+  </div>
+
+  <div id="tabContent-settings" class="tab-content">
+    <div id="settingsLoginBox" style="background:rgba(255,255,255,0.95); padding:30px 20px; border-radius:12px; text-align:center; max-width:360px; margin:40px auto;">
+      <div style="font-size:18px; font-weight:bold; color:#c55a11; margin-bottom:12px;">🔒 管理員模式</div>
+      <input type="password" id="settingsPassword" placeholder="請輸入密碼" style="width:100%; padding:10px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc;">
+      <button class="btn-sm btn-primary" id="btnSettingsLogin" style="width:100%; padding:10px;">進入設定</button>
+      <div id="settingsLoginMsg" style="color:#dc3545; font-size:13px; margin-top:8px;"></div>
+    </div>
+
+    <div id="settingsContent" style="display:none;">
+    <div class="section-title">🖼️ 1. 直版側邊相冊管理</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">上傳電腦圖片：</label>
+        <input type="file" id="bgFileInput" accept="image/*" style="flex:1; background:white;">
+      </div>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">圖片網址（雲端）：</label>
+        <input type="text" id="bgUrlInput" placeholder="貼上公開圖片網址 http..." style="flex:1;">
+        <button class="btn-sm btn-secondary" id="btnAddBgUrl">新增網址</button>
+      </div>
+      <div style="font-weight:bold; margin-top:10px;">目前直版相冊清單：</div>
+      <div class="bg-thumbs" id="bgThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">🖼️ 2. 橫版頂部大橫幅相冊管理</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">上傳電腦圖片：</label>
+        <input type="file" id="bannerFileInput" accept="image/*" style="flex:1; background:white;">
+      </div>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">圖片網址（雲端）：</label>
+        <input type="text" id="bannerUrlInput" placeholder="貼上公開橫版圖片網址 http..." style="flex:1;">
+        <button class="btn-sm btn-secondary" id="btnAddBannerUrl">新增橫版網址</button>
+      </div>
+      <div style="font-weight:bold; margin-top:10px;">目前橫版相冊清單：</div>
+      <div class="bg-thumbs" id="bannerThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">🖼️ 左右大背景（手機比例圖，滿版左右）</div>
+    <div class="bg-setting-panel">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+        <div>
+          <label style="font-weight:bold; display:block; margin-bottom:6px;">左側圖片</label>
+          <input type="file" id="leftSideFile" accept="image/*" style="width:100%; margin-bottom:6px;">
+          <input type="text" id="leftSideUrl" placeholder="或貼網址" style="width:100%; margin-bottom:6px;">
+          <button class="btn-sm btn-secondary" id="btnSetLeft">套用左側</button>
+        </div>
+        <div>
+          <label style="font-weight:bold; display:block; margin-bottom:6px;">右側圖片</label>
+          <input type="file" id="rightSideFile" accept="image/*" style="width:100%; margin-bottom:6px;">
+          <input type="text" id="rightSideUrl" placeholder="或貼網址" style="width:100%; margin-bottom:6px;">
+          <button class="btn-sm btn-secondary" id="btnSetRight">套用右側</button>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#666; margin-top:8px;">建議使用手機直式比例圖片，會自動滿版左右兩邊。</div>
+    </div>
+
+    <div class="section-title">🖼️ 3. 全頁大背景圖片</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">上傳圖片：</label>
+        <input type="file" id="fullBgFileInput" accept="image/*" style="flex:1; background:white;">
+      </div>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">圖片網址：</label>
+        <input type="text" id="fullBgUrlInput" placeholder="貼上公開圖片網址" style="flex:1;">
+        <button class="btn-sm btn-secondary" id="btnSetFullBgUrl">套用</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0;">
+        <div>
+          <label style="font-size:13px; font-weight:bold;">大小</label>
+          <select id="fullBgSize" style="width:100%; margin-top:4px;">
+            <option value="cover">填滿（Cover）</option>
+            <option value="contain">完整顯示（Contain）</option>
+            <option value="100% auto">寬度滿版</option>
+            <option value="auto 100%">高度滿版</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:bold;">位置</label>
+          <select id="fullBgPosition" style="width:100%; margin-top:4px;">
+            <option value="center">置中</option>
+            <option value="top">靠上</option>
+            <option value="bottom">靠下</option>
+            <option value="left">靠左</option>
+            <option value="right">靠右</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="font-weight:bold; margin:10px 0 6px;">已上傳的背景（點擊套用）：</div>
+      <div id="fullBgHistory" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+
+      <button class="btn-sm btn-danger" id="btnClearFullBg" style="margin-top:12px;">清除大背景</button>
+    </div>
+
+    <div class="section-title">🎞️ 相冊自動輪播設定</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+        <label style="font-weight:bold; cursor:pointer;">
+          <input type="checkbox" id="slideshowToggle"> 啟用自動輪播相冊
+        </label>
+        <div>
+          切換間隔：
+          <select id="slideshowInterval" style="width:110px; display:inline-block;">
+            <option value="5000">每 5 秒</option>
+            <option value="10000" selected>每 10 秒</option>
+            <option value="30000">每 30 秒</option>
+            <option value="60000">每 1 分鐘</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal-card">
+    <h3 style="margin-top:0; color:#c55a11; display:flex; justify-content:space-between; align-items:center;">
+      <span>✏️ 編輯成品 / 配方</span>
+      <button class="btn-sm btn-secondary" id="btnCloseModal">✕ 關閉</button>
+    </h3>
+    <div id="modalEditBody"></div>
+    <div style="margin-top: 20px; text-align: right;">
+      <button class="btn-sm btn-primary" id="btnSaveModal" style="padding: 8px 20px;">儲存變更</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC-U8AEP7VymgBnaQ8DrrAuGWbrF6I8peE",
+  authDomain: "maple-calculator-a35a4.firebaseapp.com",
+  databaseURL: "https://maple-calculator-a35a4-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "maple-calculator-a35a4",
+  storageBucket: "maple-calculator-a35a4.firebasestorage.app",
+  messagingSenderId: "710154244131",
+  appId: "1:710154244131:web:582d7a622e953596432196",
+  measurementId: "G-9W9NZ46W2Z"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const dbRef = db.ref('maple_calculator_v493');
+
+window.addEventListener('load', function() {
+
+  const defaultExpTab = {
+    author: "我的測試分頁",
+    testMinutes: 60,
+    expStart: 0,
+    expEnd: 0,
+    mesosStart: 0,
+    mesosEnd: 0,
+    dropItems: [
+      { name: "觸角", price: 303, startQty: 0, endQty: 0 },
+      { name: "尾巴", price: 310, startQty: 0, endQty: 0 }
+    ],
+    dropWeaponQty: 0,
+    hpPrice: 0,
+    hpStart: 0,
+    hpEnd: 0,
+    mpPrice: 0,
+    mpStart: 0,
+    mpEnd: 0,
+    cherryPrice: 0,
+    cherryStart: 0,
+    cherryEnd: 0
+  };
+
+  const defaultData = {
+    rawMaterials: {
+      "青銅母礦": 4500,
+      "鋼鐵母礦": 5000,
+      "木柴": 1000,
+      "堅硬羽毛": 2000,
+      "柔軟羽毛": 2500
+    },
+    products: [
+      { name: "青銅", isOreRecipe: true, oreName: "青銅母礦", craftFee: 300, marketPrice: 48000, ingredients: [] },
+      { name: "鋼鐵", isOreRecipe: true, oreName: "鋼鐵母礦", craftFee: 300, marketPrice: 53000, ingredients: [] },
+      {
+        name: "合成木材", isOreRecipe: false, craftFee: 0, marketPrice: 10000,
+        ingredients: [{ name: "木柴", qty: 5 }]
+      },
+      {
+        name: "青銅長劍", isOreRecipe: false, craftFee: 50000, marketPrice: 200000,
+        ingredients: [{ name: "青銅", qty: 3 }, { name: "木柴", qty: 10 }]
       }
-      rtdb = firebase.database();
-      dbRef = rtdb.ref('raid_data_v3');
-    } catch (e) {
-      console.error('Firebase init error:', e);
+    ],
+    bgImages: ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80"],
+    bannerImages: ["https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80"],
+    slideshowActive: false,
+    slideshowTime: 10000
+  };
+
+  let appData = JSON.parse(JSON.stringify(defaultData));
+  
+  let localExpData = JSON.parse(localStorage.getItem('maple_local_exp_v1')) || {
+    expTabs: [JSON.parse(JSON.stringify(defaultExpTab))],
+    activeExpTabIdx: 0
+  };
+
+  let currentBgIndex = 0;
+  let currentBannerIndex = 0;
+  let slideshowTimer = null;
+  let isLocalUpdating = false;
+  let editingProductIndex = null;
+
+  const statusEl = document.getElementById('cloudSyncStatus');
+
+  dbRef.once('value').then((snapshot) => {
+    const val = snapshot.val();
+    if (!val) {
+      dbRef.set(defaultData);
     }
-    createApp({
-      setup() {
-        const currentTab = ref('signup');
-        const currentWeekKey = ref('thisWeek');
-        const showModal = ref(false);
-        const isEditMode = ref(false);
-        const editTargetId = ref(null);
-        const isLoaded = ref(false);
-        const syncStatus = ref({
-          text: '載入雲端資料中...',
-          color: 'text-amber-400',
-          bg: 'bg-amber-500'
-        });
-        const selectedUser = ref('');
-        const selectedBosses = ref(['闇黑龍王']);
-        const filterBoss = ref('all');
-        const form = ref({ name: '', job: '', level: 160 });
-        const bosses = ref([
-          { id: 'papulatus', name: '拉圖斯', icon: '⏰' },
-          { id: 'chaos_zakum', name: '殘暴炎魔', icon: '🗿' },
-          { id: 'papulatus_hard', name: '拉圖斯(困難)', icon: '⏳' },
-          { id: 'horntail', name: '闇黑龍王', icon: '🐉' },
-          { id: 'krexel', name: '克雷塞爾', icon: '🌳' },
-          { id: 'krexel2', name: '克雷塞爾 2', icon: '🍃' },
-          { id: 'epinea_poison', name: '艾畢奈雅(毒)', icon: '🟢🦋' },
-          { id: 'epinea_ice', name: '艾畢奈雅(冰)', icon: '🔵🦋' }
-        ]);
+  });
 
-        // ========== 活動時間軸資料（每週更新這裡） ==========
-        // 格式說明：
-        // id       : 唯一識別（不要重複）
-        // type     : 'event' | 'shop' | 'soon'
-        // icon     : 表情符號
-        // title    : 標題
-        // desc     : 說明（可空字串）
-        // start    : 開始日期 'YYYY-MM-DD'（沒有就填今天）
-        // end      : 結束日期 'YYYY-MM-DD'（維護前 = 當天）
-        // 每週更新時：只刪除 end 已過期的項目，未到期的保留，再新增本週新的
-        const scheduleUpdatedAt = ref('2026/10/20');
-        const scheduleItems = ref([
-          // 活動
-          {
-            id: 'halloween-signin',
-            type: 'event',
-            icon: '🎃',
-            title: '28天每日簽到活動',
-            desc: '每天登入自動簽到，豐富獎勵',
-            start: '2026-10-20',
-            end: '2026-11-17'
-          },
-          {
-            id: 'halloween-enhance',
-            type: 'event',
-            icon: '💪',
-            title: '萬聖節強化競賽',
-            desc: '強化萬聖節戒指，12/8公布排名獎勵',
-            start: '2026-10-20',
-            end: '2026-12-01'
-          },
-          {
-            id: 'halloween-coin',
-            type: 'event',
-            icon: '🪙',
-            title: '南瓜硬幣商店',
-            desc: '收集至11/17，商店開放至12/1',
-            start: '2026-10-20',
-            end: '2026-12-01'
-          },
-          {
-            id: 'halloween-growth',
-            type: 'event',
-            icon: '👻',
-            title: '萬聖節成長活動',
-            desc: '陰森的氣息、經驗加成、組隊任務4倍',
-            start: '2026-10-20',
-            end: '2026-11-17'
-          },
-          {
-            id: 'halloween-potion',
-            type: 'event',
-            icon: '💊',
-            title: '微微安的神祕藥水商店',
-            desc: '楓幣購買常用恢復道具',
-            start: '2026-10-20',
-            end: '2026-11-17'
-          },
-          {
-            id: 'drop-up-w4',
-            type: 'event',
-            icon: '⚔️',
-            title: '第4週突襲主要道具掉落率 UP',
-            desc: '克雷塞爾、拉圖斯',
-            start: '2026-10-20',
-            end: '2026-10-27'
-          },
-          // 商城禮包
-          {
-            id: 'shop-camilla',
-            type: 'shop',
-            icon: '📦',
-            title: '卡蜜拉的成長支援禮包',
-            desc: '50 WC　｜　帳號限購1次',
-            start: '2026-10-20',
-            end: '2026-11-03',
-            contents: [
-              { name: '經驗值3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' },
-              { name: '掉落率3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' }
-            ]
-          },
-          {
-            id: 'shop-pumpkin',
-            type: 'shop',
-            icon: '🎃',
-            title: '南瓜的特別禮包',
-            desc: '13,200 WC　｜　帳號限購5次',
-            start: '2026-10-20',
-            end: '2026-11-17',
-            contents: [
-              { name: '每週突襲精選箱', qty: 1, note: '開啟後14天內使用' },
-              { name: '[活動] 黃金突襲額外入場券', qty: 1, note: '' },
-              { name: '高級瞬移之石', qty: 11, note: '' },
-              { name: '生命的庇護', qty: 3, note: '' },
-              { name: '經驗值3倍券(10分鐘)', qty: 6, note: '開啟後14天內使用' },
-              { name: '掉落率3倍券(10分鐘)', qty: 6, note: '開啟後14天內使用' }
-            ]
-          },
-          {
-            id: 'shop-hans',
-            type: 'shop',
-            icon: '🎒',
-            title: '漢斯的冒險補給禮包',
-            desc: '6,600 WC　｜　帳號限購3次',
-            start: '2026-10-20',
-            end: '2026-11-17',
-            contents: [
-              { name: '掉落率2倍券(30分鐘)', qty: 5, note: '開啟後14天內使用' },
-              { name: '高級瞬移之石', qty: 10, note: '' },
-              { name: '凍結加持器', qty: 11, note: '' },
-              { name: '超級藥水', qty: 300, note: '' },
-              { name: '高效能喇叭UP', qty: 5, note: '' },
-              { name: '純白卷軸隨機箱', qty: 1, note: '開啟後14天內使用' }
-            ]
-          },
-          {
-            id: 'shop-athena',
-            type: 'shop',
-            icon: '⚔️',
-            title: '雅典娜女神的阿卡伊農挑戰禮包',
-            desc: '4,000 WC　｜　帳號限購1次',
-            start: '2026-10-20',
-            end: '2026-12-01',
-            contents: [
-              { name: '[活動] 突襲額外入場券隨機箱', qty: 1, note: '開啟後14天內使用' },
-              { name: '歐洛拉戒指 +2 交換券(7日)', qty: 1, note: '開啟後14天內使用' },
-              { name: '甜蜜藥水箱', qty: 2, note: '開啟後14天內使用' },
-              { name: '生命的庇護箱', qty: 2, note: '開啟後14天內使用' },
-              { name: '可愛小蛇', qty: 1, note: '' }
-            ]
-          },
-          {
-            id: 'shop-barber',
-            type: 'shop',
-            icon: '🛡️',
-            title: '巴伯下士的討伐補給禮包',
-            desc: '1,320 WC　｜　帳號限購3次',
-            start: '2026-10-20',
-            end: '2026-12-01',
-            contents: [
-              { name: '突襲額外入場券', qty: 7, note: '' },
-              { name: '高級瞬移之石', qty: 5, note: '' },
-              { name: '生命的庇護箱', qty: 1, note: '開啟後14天內使用' },
-              { name: '高效能喇叭UP', qty: 2, note: '' },
-              { name: '掉落率3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' }
-            ]
-          },
-          {
-            id: 'shop-edmond',
-            type: 'shop',
-            icon: '🪙',
-            title: '管家艾德蒙的南瓜硬幣禮包',
-            desc: '1,320 WC　｜　購買次數無限制',
-            start: '2026-10-20',
-            end: '2026-11-17',
-            contents: [
-              { name: '[活動] 南瓜硬幣', qty: 450, note: '' },
-              { name: '掉落率2倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' },
-              { name: '特殊藥水', qty: 30, note: '' }
-            ]
-          },
-          {
-            id: 'shop-jack',
-            type: 'shop',
-            icon: '🎁',
-            title: '傑克的萬聖節禮物禮包',
-            desc: '免費　｜　帳號每日限購1次',
-            start: '2026-10-20',
-            end: '2026-11-17',
-            contents: [
-              { name: '[活動] 南瓜硬幣', qty: 10, note: '' }
-            ]
-          },
-          {
-            id: 'shop-cat-scroll',
-            type: 'shop',
-            icon: '📜',
-            title: '流浪貓的卷軸禮包',
-            desc: '660 WC　｜　帳號限購3次',
-            start: '2026-10-20',
-            end: '2026-11-24',
-            contents: [
-              { name: '60%卷軸箱', qty: 1, note: '開啟後14天內使用' },
-              { name: '掉落率3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' }
-            ]
-          },
-          {
-            id: 'shop-trick-or-treat',
-            type: 'shop',
-            icon: '🍬',
-            title: '不給糖就搗蛋轉蛋券',
-            desc: '1,000 / 4,750 WC　｜　轉蛋券可交易',
-            start: '2026-10-20',
-            end: '2026-11-24',
-            contents: [
-              { name: '不給糖就搗蛋轉蛋券箱子(5張)', qty: 1, note: '含轉蛋券×5 + 萬聖硬幣×5' },
-              { name: '不給糖就搗蛋轉蛋券箱子(25張)', qty: 1, note: '含轉蛋券×25 + 萬聖硬幣×28' }
-            ]
-          },
-          {
-            id: 'shop-puppets',
-            type: 'shop',
-            icon: '🧸',
-            title: '可愛木偶寵物（藍／紫／橘）',
-            desc: '1,600 WC　｜　膠囊可交易',
-            start: '2026-10-20',
-            end: '2026-11-17',
-            contents: [
-              { name: '可愛藍木偶', qty: 1, note: '開啟後不可交易' },
-              { name: '可愛紫木偶', qty: 1, note: '開啟後不可交易' },
-              { name: '可愛橘木偶', qty: 1, note: '開啟後不可交易' }
-            ]
-          }
-        ]);
-        const scheduleNotes = ref([
-          '掉落率／經驗值加倍券開啟後須於14天內使用，逾期自動刪除',
-          '所有禮包發放至郵箱，保管14天，開啟後無法退款',
-          '萬聖節活動相關道具多數無法交易',
-          '第4週突襲掉落UP至10/27維護前'
-        ]);
-        // 禮包內容物展開狀態
-        const expandedContents = ref({});
-        const toggleContents = (id) => {
-          expandedContents.value[id] = !expandedContents.value[id];
-        };
-        // ========== 活動時間軸資料結束 ==========
+  dbRef.on('value', (snapshot) => {
+    const val = snapshot.val();
+    if (val) {
+      appData = Object.assign({}, defaultData, val);
+      if (!appData.rawMaterials) appData.rawMaterials = defaultData.rawMaterials;
+      if (!appData.products) appData.products = defaultData.products;
+      if (!appData.bgImages) appData.bgImages = defaultData.bgImages;
+      if (!appData.bannerImages) appData.bannerImages = defaultData.bannerImages;
+    }
+    
+    statusEl.innerText = "☁️ 雲端同步完成";
+    statusEl.className = "";
+    
+    if (!isLocalUpdating) {
+      refreshUI();
+    }
+    isLocalUpdating = false;
+  }, (error) => {
+    statusEl.innerText = "⚠️ 雲端連線失敗";
+    statusEl.className = "syncing";
+  });
 
-        // 時間軸計算
-        const todayLabel = computed(() => {
-          const d = new Date();
-          return (d.getMonth()+1) + '/' + d.getDate() + '（' + ['日','一','二','三','四','五','六'][d.getDay()] + '）';
-        });
-        // 計算時間進度（共用）
-        const enrichItem = (item) => {
-          const now = new Date();
-          now.setHours(0,0,0,0);
-          const start = new Date(item.start + 'T00:00:00');
-          const end = new Date(item.end + 'T00:00:00');
-          const totalMs = end - start;
-          const passedMs = now - start;
-          const daysLeft = Math.ceil((end - now) / 86400000);
-          let progressPct = totalMs > 0 ? Math.min(100, Math.max(0, (passedMs / totalMs) * 100)) : 0;
-          let todayPct = progressPct;
-          if (now < start) { progressPct = 0; todayPct = 0; }
-          if (now > end) { progressPct = 100; todayPct = 100; }
-          const startLabel = (start.getMonth()+1) + '/' + start.getDate();
-          const endLabel = (end.getMonth()+1) + '/' + end.getDate() + ' 維護前';
-          return { ...item, daysLeft, progressPct, todayPct, startLabel, endLabel };
-        };
-        // 活動更新
-        const eventItems = computed(() => {
-          return scheduleItems.value
-            .filter(item => item.type === 'event')
-            .map(enrichItem)
-            .filter(item => item.daysLeft > -1)
-            .sort((a, b) => a.daysLeft - b.daysLeft);
-        });
-        // 購物商城
-        const shopItems = computed(() => {
-          return scheduleItems.value
-            .filter(item => item.type === 'shop')
-            .map(enrichItem)
-            .filter(item => item.daysLeft > -1)
-            .sort((a, b) => a.daysLeft - b.daysLeft);
-        });
-        // Coming Soon
-        const soonItems = computed(() => {
-          return scheduleItems.value.filter(item => item.type === 'soon');
-        });
+  function saveDataToCloud() {
+    isLocalUpdating = true;
+    statusEl.innerText = "🔄 同步中...";
+    statusEl.className = "syncing";
+    dbRef.set(appData).then(() => {
+      statusEl.innerText = "☁️ 雲端同步完成";
+      statusEl.className = "";
+    }).catch(() => {
+      statusEl.innerText = "⚠️ 儲存失敗";
+      statusEl.className = "syncing";
+    });
+  }
 
-        const getBossIcon = (bossName) => {
-          const found = bosses.value.find(b => b.name === bossName);
-          return found ? found.icon : '⚔️';
-        };
-        const getBossArray = (bossString) => {
-          if (!bossString || bossString === '未報名') return ['未報名'];
-          return bossString.split(' + ');
-        };
-        const getTuesdayCycle = (offsetWeeks = 0) => {
-          const now = new Date();
-          const day = now.getDay();
-          const diffToTuesday = (day >= 2 ? day - 2 : day + 5);
-          
-          const tuesday = new Date(now);
-          tuesday.setDate(now.getDate() - diffToTuesday + (offsetWeeks * 7));
-          tuesday.setHours(0, 0, 0, 0);
-          const days = [];
-          const weekDayNames = ['二', '三', '四', '五', '六', '日', '一'];
-          for (let i = 0; i < 7; i++) {
-            const d = new Date(tuesday);
-            d.setDate(tuesday.getDate() + i);
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            days.push({
-              label: weekDayNames[i],
-              monthDay: mm + '/' + dd,
-              fullDate: d.getFullYear() + '-' + mm + '-' + dd
-            });
-          }
-          return days;
-        };
-        const thisWeekDays = getTuesdayCycle(0);
-        const nextWeekDays = getTuesdayCycle(1);
-        const weekRangeTexts = {
-          thisWeek: thisWeekDays[0].monthDay + ' - ' + thisWeekDays[6].monthDay,
-          nextWeek: nextWeekDays[0].monthDay + ' - ' + nextWeekDays[6].monthDay
-        };
-        const activeDays = computed(() => {
-          return currentWeekKey.value === 'thisWeek' ? thisWeekDays : nextWeekDays;
-        });
-        const db = ref({
-          cycleStart: thisWeekDays[0].fullDate,
-          members: {},
-          thisWeek: {},
-          nextWeek: {}
-        });
-        const syncToCloud = () => {
-          if (!dbRef || !isLoaded.value) return;
-          const payload = JSON.parse(JSON.stringify(db.value));
-          dbRef.set(payload).catch(err => {
-            console.error('Firebase save error:', err);
-          });
-        };
-        const forceCycleShift = () => {
-          if (confirm('確定要將【下週報名名單】直接推進為【本週報名名單】嗎？')) {
-            db.value.thisWeek = db.value.nextWeek || {};
-            db.value.nextWeek = {};
-            db.value.cycleStart = thisWeekDays[0].fullDate;
-            syncToCloud();
-            alert('已成功將下週名單推進為本週名單！');
-          }
-        };
-        onMounted(() => {
-          if (!dbRef) {
-            syncStatus.value = { text: 'Firebase未啟動', color: 'text-red-400', bg: 'bg-red-500' };
-            return;
-          }
-          dbRef.on('value', (snapshot) => {
-            const val = snapshot.val();
-            const realCurrentTuesday = thisWeekDays[0].fullDate;
-            if (val) {
-              db.value = {
-                cycleStart: val.cycleStart || realCurrentTuesday,
-                members: val.members || {},
-                thisWeek: val.thisWeek || {},
-                nextWeek: val.nextWeek || {}
-              };
-              // 自動偵測是否跨過週二：如果雲端記錄的 cycleStart 早於本週實際的週二，代表進入新的一週！
-              if (db.value.cycleStart < realCurrentTuesday) {
-                console.log('偵測到新的一週開始，自動將下週名單推進為本週！');
-                db.value.thisWeek = db.value.nextWeek || {};
-                db.value.nextWeek = {};
-                db.value.cycleStart = realCurrentTuesday;
-                // 自動更新回雲端
-                dbRef.set(JSON.parse(JSON.stringify(db.value)));
-              }
-            } else {
-              db.value.cycleStart = realCurrentTuesday;
-            }
-            isLoaded.value = true;
-            syncStatus.value = { text: '雲端即時連線', color: 'text-emerald-400', bg: 'bg-emerald-500' };
-          }, (err) => {
-            console.error('Firebase read error:', err);
-            syncStatus.value = { text: '權限受阻', color: 'text-red-400', bg: 'bg-red-500' };
-          });
-        });
-        const membersList = computed(() => Object.values(db.value.members || {}));
-        const currentList = computed(() => {
-          const weekData = db.value[currentWeekKey.value] || {};
-          return Object.keys(weekData).map(mId => {
-            const mInfo = db.value.members[mId] || { name: '未知角色', job: '未知', level: 0 };
-            return {
-              memberId: mId,
-              name: mInfo.name,
-              job: mInfo.job,
-              level: mInfo.level,
-              boss: weekData[mId].boss || '未報名',
-              note: weekData[mId].note || '',
-              availability: weekData[mId].availability || [true, true, true, true, true, true, true]
-            };
-          });
-        });
-        const unregisteredThisWeek = computed(() => {
-          const registeredIds = Object.keys(db.value.thisWeek || {});
-          return membersList.value.filter(m => !registeredIds.includes(m.id));
-        });
-        const unregisteredNextWeek = computed(() => {
-          const registeredIds = Object.keys(db.value.nextWeek || {});
-          return membersList.value.filter(m => !registeredIds.includes(m.id));
-        });
-        const bossCounts = computed(() => {
-          const counts = { all: currentList.value.length };
-          bosses.value.forEach(b => {
-            counts[b.name] = 0;
-          });
-          currentList.value.forEach(item => {
-            const userBosses = getBossArray(item.boss);
-            userBosses.forEach(bossName => {
-              if (counts[bossName] !== undefined) {
-                counts[bossName]++;
-              }
-            });
-          });
-          return counts;
-        });
-        const quickSelectUser = (memberId, weekKey) => {
-          selectedUser.value = memberId;
-          currentWeekKey.value = weekKey;
-          currentTab.value = 'signup';
-          onUserOrWeekChange();
-        };
-        const updateMemberNote = (memberId, noteValue) => {
-          const wkKey = currentWeekKey.value;
-          if (db.value[wkKey] && db.value[wkKey][memberId]) {
-            db.value[wkKey][memberId].note = noteValue;
-            syncToCloud();
-          }
-        };
-        const switchTab = (tabName) => {
-          currentTab.value = tabName;
-          if (tabName === 'list') {
-            filterBoss.value = 'all';
-          }
-        };
-        const setSignupWeek = (wkKey) => {
-          currentWeekKey.value = wkKey;
-          onUserOrWeekChange();
-        };
-        const onUserOrWeekChange = () => {
-          if (!selectedUser.value) return;
-          const weekData = db.value[currentWeekKey.value] || {};
-          if (weekData[selectedUser.value] && weekData[selectedUser.value].boss) {
-            selectedBosses.value = weekData[selectedUser.value].boss.split(' + ');
-          } else {
-            selectedBosses.value = ['闇黑龍王'];
-          }
-        };
-        const openAddModal = () => {
-          isEditMode.value = false;
-          form.value = { name: '', job: '', level: 160 };
-          showModal.value = true;
-        };
-        const openEditModal = (item) => {
-          isEditMode.value = true;
-          editTargetId.value = item.memberId;
-          const m = db.value.members[item.memberId];
-          form.value = { name: m.name, job: m.job, level: m.level };
-          showModal.value = true;
-        };
-        const saveMember = () => {
-          if (!form.value.name.trim() || !form.value.job.trim()) {
-            alert('請完整填寫 ID 與職業！');
-            return;
-          }
-          if (isEditMode.value) {
-            if (db.value.members[editTargetId.value]) {
-              db.value.members[editTargetId.value].name = form.value.name.trim();
-              db.value.members[editTargetId.value].job = form.value.job.trim();
-              db.value.members[editTargetId.value].level = form.value.level || 150;
-            }
-            alert('角色資訊已更新！');
-          } else {
-            const newId = 'm_' + Date.now();
-            if (!db.value.members) db.value.members = {};
-            db.value.members[newId] = {
-              id: newId,
-              name: form.value.name.trim(),
-              job: form.value.job.trim(),
-              level: form.value.level || 150
-            };
-            selectedUser.value = newId;
-            alert('角色登記完成！');
-          }
-          syncToCloud();
-          showModal.value = false;
-        };
-        const deletePermanentMember = (memberId) => {
-          if (!memberId || !db.value.members[memberId]) return;
-          const targetName = db.value.members[memberId].name;
-          if (confirm('⚠️ 警告: 確定要將【' + targetName + '】永久刪除嗎？\n此動作會將該角色自選單以及所有週次的報名中徹底清除！')) {
-            delete db.value.members[memberId];
-            if (db.value.thisWeek && db.value.thisWeek[memberId]) delete db.value.thisWeek[memberId];
-            if (db.value.nextWeek && db.value.nextWeek[memberId]) delete db.value.nextWeek[memberId];
-            
-            selectedUser.value = '';
-            syncToCloud();
-            alert('已永久註銷角色【' + targetName + '】！');
-          }
-        };
-        const deleteFromCurrentWeek = (memberId) => {
-          const wkText = currentWeekKey.value === 'thisWeek' ? '本週' : '下週';
-          if (confirm('確定要將該角色從【' + wkText + '名單】移除嗎？（角色依然保留在選單中）')) {
-            if (db.value[currentWeekKey.value]) {
-              delete db.value[currentWeekKey.value][memberId];
-              syncToCloud();
-            }
-          }
-        };
-        const toggleDay = (item, dayIdx) => {
-          const weekData = db.value[currentWeekKey.value];
-          if (weekData && weekData[item.memberId]) {
-            weekData[item.memberId].availability[dayIdx] = !weekData[item.memberId].availability[dayIdx];
-            syncToCloud();
-          }
-        };
-        const toggleBoss = (bossName) => {
-          const idx = selectedBosses.value.indexOf(bossName);
-          if (idx > -1) {
-            selectedBosses.value.splice(idx, 1);
-          } else {
-            if (selectedBosses.value.length >= 2) {
-              alert('每週最多只能報名 2 個副本！');
-              return;
-            }
-            selectedBosses.value.push(bossName);
-          }
-        };
-        const submitSignup = () => {
-          if (!selectedUser.value) return;
-          const wkKey = currentWeekKey.value;
-          if (!db.value[wkKey]) db.value[wkKey] = {};
-          const existing = db.value[wkKey][selectedUser.value];
-          db.value[wkKey][selectedUser.value] = {
-            boss: selectedBosses.value.join(' + '),
-            note: existing ? (existing.note || '') : '',
-            availability: existing ? (existing.availability || [true, true, true, true, true, true, true]) : [true, true, true, true, true, true, true]
-          };
-          syncToCloud();
-          const targetMember = db.value.members[selectedUser.value];
-          alert('已成功將【' + targetMember.name + '】登記至【' + (wkKey === 'thisWeek' ? '本週' : '下週') + '】名單！');
-          switchTab('list');
-        };
-        const filteredList = computed(() => {
-          return currentList.value.filter(item => {
-            if (filterBoss.value === 'all') return true;
-            if (!item.boss) return false;
-            const userBosses = item.boss.split(' + ');
-            return userBosses.includes(filterBoss.value);
-          });
-        });
-        return {
-          currentTab, currentWeekKey, showModal, isEditMode, syncStatus,
-          selectedUser, selectedBosses, bosses, activeDays, weekRangeTexts,
-          membersList, currentList, filterBoss, form, filteredList,
-          unregisteredThisWeek, unregisteredNextWeek, quickSelectUser, forceCycleShift,
-          getBossIcon, getBossArray, updateMemberNote, switchTab, setSignupWeek, onUserOrWeekChange, openAddModal, openEditModal,
-          saveMember, deletePermanentMember, deleteFromCurrentWeek, toggleDay, toggleBoss, submitSignup, syncToCloud,
-          bossCounts,
-          // 活動時間軸
-          scheduleUpdatedAt, scheduleItems, scheduleNotes, todayLabel, eventItems, shopItems, soonItems,
-          expandedContents, toggleContents
-        };
+  function saveExpDataLocally() {
+    localStorage.setItem('maple_local_exp_v1', JSON.stringify(localExpData));
+  }
+
+  function formatNumber(num) {
+    if (num === '' || num === null || isNaN(num)) return '';
+    return Number(num).toLocaleString('en-US');
+  }
+
+  function parseNumber(str) {
+    if (!str) return 0;
+    let s = String(str).replace(/,/g, '').replace(/\s/g, '').toLowerCase();
+    // 支援「萬」或「w」
+    if (s.endsWith('萬') || s.endsWith('w')) {
+      const num = parseFloat(s.replace(/[萬w]/g, '')) || 0;
+      return Math.round(num * 10000);
+    }
+    return Number(s) || 0;
+  }
+
+  function bindCommaInputs() {
+    document.querySelectorAll('.comma-input').forEach(input => {
+      if (input.dataset.commaBound) return;
+      // 卷軸單價有特殊「萬」處理，不套用一般 blur
+      if (input.classList.contains('scroll-price')) return;
+      input.dataset.commaBound = "true";
+
+      input.addEventListener('focus', function() {
+        this.value = parseNumber(this.value) === 0 ? '' : parseNumber(this.value);
+      });
+
+      input.addEventListener('blur', function() {
+        const val = parseNumber(this.value);
+        this.value = formatNumber(val);
+        syncExpFormToData();
+      });
+
+      input.addEventListener('input', function() {
+        syncExpFormToData();
+      });
+    });
+  }
+
+  function syncRawMaterials() {
+    appData.products.forEach(p => {
+      if (p.isOreRecipe && p.oreName && !(p.oreName in appData.rawMaterials)) {
+        appData.rawMaterials[p.oreName] = 4500;
       }
-    }).mount('#app');
-  </script>
+      if (p.ingredients) {
+        p.ingredients.forEach(ing => {
+          const isProducedByOre = appData.products.some(prod => prod.name === ing.name && prod.isOreRecipe);
+          if (!isProducedByOre && ing.name && !(ing.name in appData.rawMaterials)) {
+            appData.rawMaterials[ing.name] = 0;
+          }
+        });
+      }
+    });
+  }
+
+  function getItemUnitPrice(itemName) {
+    if (itemName in appData.rawMaterials) return appData.rawMaterials[itemName];
+    const prod = appData.products.find(p => p.name === itemName);
+    if (prod && prod.isOreRecipe) {
+      const oreP = appData.rawMaterials[prod.oreName] || 0;
+      return (oreP * 10) + (prod.craftFee || 300);
+    }
+    if (prod && !prod.isOreRecipe) {
+      let cost = prod.craftFee || 0;
+      if (prod.ingredients) {
+        prod.ingredients.forEach(ing => { cost += getItemUnitPrice(ing.name) * ing.qty; });
+      }
+      return cost;
+    }
+    return 0;
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = function() {
+      const targetId = this.getAttribute('data-tab');
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(targetId).classList.add('active');
+      this.classList.add('active');
+    };
+  });
+
+  function renderMarketGrid() {
+    syncRawMaterials();
+    const grid = document.getElementById('marketPriceGrid');
+    const keys = Object.keys(appData.rawMaterials);
+
+    if (keys.length === 0) {
+      grid.innerHTML = '<div style="color:#888;">尚未有任何材料項目。</div>';
+      return;
+    }
+
+    grid.innerHTML = keys.map(mat => {
+      const isUsed = appData.products.some(p => 
+        (p.isOreRecipe && p.oreName === mat) || 
+        (!p.isOreRecipe && p.ingredients && p.ingredients.some(ing => ing.name === mat))
+      );
+
+      return `
+        <div class="price-item" data-mat="${mat}">
+          ${!isUsed ? `<button class="mat-del-btn" title="刪除此雜物">✕</button>` : ''}
+          <label>${mat} (單價)</label>
+          <input type="text" class="mat-price-input comma-input" data-mat="${mat}" value="${formatNumber(appData.rawMaterials[mat])}">
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.mat-price-input').forEach(input => {
+      input.oninput = function() {
+        const rawVal = parseNumber(this.value);
+        appData.rawMaterials[this.getAttribute('data-mat')] = rawVal;
+        saveDataToCloud();
+        onProductChange();
+        renderProductManageList();
+      };
+    });
+
+    document.querySelectorAll('.mat-del-btn').forEach(btn => {
+      btn.onclick = function() {
+        const mat = this.closest('.price-item').getAttribute('data-mat');
+        if (confirm(`確定要刪除雜物「${mat}」嗎？`)) {
+          delete appData.rawMaterials[mat];
+          saveDataToCloud();
+          refreshUI();
+        }
+      };
+    });
+
+    bindCommaInputs();
+  }
+
+  document.getElementById('btnAddRawMat').onclick = function() {
+    const matName = prompt('請輸入打怪掉落物或雜物名稱：');
+    if (matName && matName.trim()) {
+      const name = matName.trim();
+      if (!(name in appData.rawMaterials)) {
+        appData.rawMaterials[name] = 0;
+        saveDataToCloud();
+        refreshUI();
+      } else {
+        alert('此項目已在清單中！');
+      }
+    }
+  };
+
+  function renderProductDropdown() {
+    const select = document.getElementById('productSelect');
+    const currentVal = select.value;
+    if (appData.products.length === 0) {
+      select.innerHTML = '<option value="">無項目，請至管理配方新增</option>';
+      document.getElementById('recipeDetailsBox').innerHTML = '無配方資訊';
+      return;
+    }
+    select.innerHTML = appData.products.map((p, idx) => `<option value="${idx}">${p.name} ${p.isOreRecipe ? '(母礦合成物)' : '(組合裝備)'}</option>`).join('');
+    if (currentVal !== "" && currentVal < appData.products.length) {
+      select.value = currentVal;
+    }
+  }
+
+  function onProductChange() {
+    const select = document.getElementById('productSelect');
+    const idx = select.value;
+    if (idx === "" || !appData.products[idx]) { calculate(); return; }
+
+    const product = appData.products[idx];
+    const box = document.getElementById('recipeDetailsBox');
+
+    const marketInput = document.getElementById('inlineMarketPrice');
+    if (!marketInput.dataset.userEdited || marketInput.dataset.currentProd !== product.name) {
+      marketInput.value = formatNumber(product.marketPrice || 0);
+      marketInput.dataset.currentProd = product.name;
+      marketInput.dataset.userEdited = "";
+    }
+
+    if (product.isOreRecipe) {
+      const oreP = appData.rawMaterials[product.oreName] || 0;
+      const unitCost = (oreP * 10) + (product.craftFee || 300);
+      box.innerHTML = `
+        <div style="font-weight:bold; color:#1f497d; margin-bottom:4px;">⛏️ 母礦煉製公式：</div>
+        <div class="recipe-item"><span>• 10 個 ${product.oreName}</span><span>${formatNumber(oreP * 10)} 楓幣</span></div>
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• 合成手續費</span><span>${formatNumber(product.craftFee || 300)} 楓幣</span></div>
+        <div style="margin-top:6px; font-weight:bold; color:#2e75b6; text-align:right;">總成本 = ${formatNumber(unitCost)} 楓幣</div>
+      `;
+    } else {
+      box.innerHTML = `
+        <div style="font-weight:bold; margin-bottom:6px; color:#1f497d;">📋 裝備組裝配方需求：</div>
+        ${(product.ingredients || []).map(ing => {
+          const unitPrice = getItemUnitPrice(ing.name);
+          return `<div class="recipe-item"><span>• ${ing.name} x${ing.qty} 個</span><span>單價: ${formatNumber(unitPrice)} (小計: ${formatNumber(unitPrice * ing.qty)})</span></div>`;
+        }).join('')}
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• NPC 製作費</span><span>${formatNumber(product.craftFee || 0)} 楓幣</span></div>
+      `;
+    }
+    calculate();
+  }
+
+  document.getElementById('productSelect').onchange = function() {
+    document.getElementById('inlineMarketPrice').dataset.userEdited = "";
+    onProductChange();
+  };
+  
+  document.getElementById('inlineMarketPrice').oninput = function() {
+    this.dataset.userEdited = "true";
+    calculate();
+  };
+
+  function calculate() {
+    const select = document.getElementById('productSelect');
+    const idx = select.value;
+    if (idx === "" || !appData.products[idx]) {
+      document.getElementById('totalCost').innerText = '0 楓幣';
+      document.getElementById('netIncome3pct').innerText = '0 楓幣';
+      document.getElementById('netIncome5pct').innerText = '0 楓幣';
+      document.getElementById('profit3pct').innerText = '0 楓幣';
+      document.getElementById('profit5pct').innerText = '0 楓幣';
+      document.getElementById('profitAdvice3').innerText = '';
+      document.getElementById('profitAdvice5').innerText = '';
+      return;
+    }
+
+    const product = appData.products[idx];
+    
+    let totalCost = product.isOreRecipe ? ((appData.rawMaterials[product.oreName] || 0) * 10) + (product.craftFee || 300) : (product.craftFee || 0);
+    if (!product.isOreRecipe && product.ingredients) {
+      product.ingredients.forEach(ing => { 
+        totalCost += getItemUnitPrice(ing.name) * ing.qty; 
+      });
+    }
+
+    const sellPrice = parseNumber(document.getElementById('inlineMarketPrice').value);
+    const netIncome3 = Math.floor(sellPrice * 0.97);
+    const netIncome5 = Math.floor(sellPrice * 0.95);
+    const profit3 = netIncome3 - totalCost;
+    const profit5 = netIncome5 - totalCost;
+
+    document.getElementById('totalCost').innerText = formatNumber(totalCost) + ' 楓幣';
+    document.getElementById('netIncome3pct').innerText = formatNumber(netIncome3) + ' 楓幣';
+    document.getElementById('netIncome5pct').innerText = formatNumber(netIncome5) + ' 楓幣';
+    
+    document.getElementById('profit3pct').innerText = formatNumber(profit3) + ' 楓幣';
+    document.getElementById('profit5pct').innerText = formatNumber(profit5) + ' 楓幣';
+
+    const profitEl3 = document.getElementById('profit3pct');
+    const profitEl5 = document.getElementById('profit5pct');
+    const adviceEl3 = document.getElementById('profitAdvice3');
+    const adviceEl5 = document.getElementById('profitAdvice5');
+
+    // 3% 顏色與提示
+    if (profit3 > 0 && sellPrice > 0) {
+      profitEl3.style.color = '#28a745';
+      adviceEl3.innerText = `✅ 預估獲利！3% 純利潤率約 ${((profit3 / sellPrice) * 100).toFixed(1)}%`;
+      adviceEl3.style.color = '#28a745';
+    } else if (profit3 < 0) {
+      profitEl3.style.color = '#dc3545';
+      adviceEl3.innerText = `⚠ 3% 價格將虧損 ${formatNumber(Math.abs(profit3))} 楓幣！`;
+      adviceEl3.style.color = '#dc3545';
+    } else {
+      profitEl3.style.color = '#6c757d';
+      adviceEl3.innerText = '➖ 3% 打平成本';
+      adviceEl3.style.color = '#6c757d';
+    }
+
+    // 5% 顏色與提示
+    if (profit5 > 0 && sellPrice > 0) {
+      profitEl5.style.color = '#28a745';
+      adviceEl5.innerText = `✅ 預估獲利！5% 純利潤率約 ${((profit5 / sellPrice) * 100).toFixed(1)}%`;
+      adviceEl5.style.color = '#28a745';
+    } else if (profit5 < 0) {
+      profitEl5.style.color = '#dc3545';
+      adviceEl5.innerText = `⚠ 5% 價格將虧損 ${formatNumber(Math.abs(profit5))} 楓幣！`;
+      adviceEl5.style.color = '#dc3545';
+    } else {
+      profitEl5.style.color = '#6c757d';
+      adviceEl5.innerText = '➖ 5% 打平成本';
+      adviceEl5.style.color = '#6c757d';
+    }
+  }
+
+  function renderExpTabs() {
+    const tabsList = document.getElementById('expTabsList');
+    if (!localExpData.expTabs || localExpData.expTabs.length === 0) {
+      localExpData.expTabs = [JSON.parse(JSON.stringify(defaultExpTab))];
+      localExpData.activeExpTabIdx = 0;
+    }
+
+    tabsList.innerHTML = localExpData.expTabs.map((tab, idx) => `
+      <button class="btn-sm ${idx === localExpData.activeExpTabIdx ? 'btn-primary' : 'btn-secondary'}" data-eidx="${idx}">
+        📄 ${tab.author || ('分頁 ' + (idx + 1))}
+      </button>
+    `).join('');
+
+    tabsList.querySelectorAll('button').forEach(btn => {
+      btn.onclick = function() {
+        localExpData.activeExpTabIdx = Number(this.getAttribute('data-eidx'));
+        saveExpDataLocally();
+        loadActiveExpTabToUI();
+      };
+    });
+  }
+
+  function loadActiveExpTabToUI() {
+    renderExpTabs();
+    const tab = localExpData.expTabs[localExpData.activeExpTabIdx] || localExpData.expTabs[0];
+
+    document.getElementById('expSubTabAuthor').value = tab.author || "";
+    document.getElementById('expTestMinutes').value = tab.testMinutes !== undefined ? tab.testMinutes : 60;
+    document.getElementById('expStart').value = formatNumber(tab.expStart);
+    document.getElementById('expEnd').value = formatNumber(tab.expEnd);
+    document.getElementById('mesosStart').value = formatNumber(tab.mesosStart);
+    document.getElementById('mesosEnd').value = formatNumber(tab.mesosEnd);
+    document.getElementById('dropWeaponQty').value = formatNumber(tab.dropWeaponQty);
+
+    document.getElementById('hpPrice').value = formatNumber(tab.hpPrice);
+    document.getElementById('hpStart').value = formatNumber(tab.hpStart);
+    document.getElementById('hpEnd').value = formatNumber(tab.hpEnd);
+
+    document.getElementById('mpPrice').value = formatNumber(tab.mpPrice);
+    document.getElementById('mpStart').value = formatNumber(tab.mpStart);
+    document.getElementById('mpEnd').value = formatNumber(tab.mpEnd);
+
+    document.getElementById('cherryPrice').value = formatNumber(tab.cherryPrice);
+    document.getElementById('cherryStart').value = formatNumber(tab.cherryStart);
+    document.getElementById('cherryEnd').value = formatNumber(tab.cherryEnd);
+
+    renderDropItemsForActiveTab();
+    calculateExpEfficiency();
+    bindCommaInputs();
+  }
+
+  function renderDropItemsForActiveTab() {
+    const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
+    if (!tab.dropItems) {
+      tab.dropItems = [
+        { name: "觸角", price: 303, startQty: 0, endQty: 0 },
+        { name: "尾巴", price: 310, startQty: 0, endQty: 0 }
+      ];
+    }
+    // 相容舊資料：原本只有 qty 的話轉成 startQty=0、endQty=qty
+    tab.dropItems.forEach(item => {
+      if (item.qty !== undefined && item.startQty === undefined) {
+        item.startQty = 0;
+        item.endQty = item.qty || 0;
+        delete item.qty;
+      }
+      if (item.startQty === undefined) item.startQty = 0;
+      if (item.endQty === undefined) item.endQty = 0;
+    });
+
+    const container = document.getElementById('dropItemsContainer');
+    container.innerHTML = tab.dropItems.map((item, idx) => `
+      <div class="drop-item-row" data-didx="${idx}">
+        <input type="text" class="drop-name" value="${item.name}" placeholder="物品名稱" style="flex:1.6;">
+        <input type="text" class="drop-price comma-input" value="${formatNumber(item.price)}" placeholder="單價" style="flex:1;">
+        <span style="font-size:12px; font-weight:bold; white-space:nowrap;">單價</span>
+        <input type="text" class="drop-start comma-input" value="${item.startQty ? formatNumber(item.startQty) : ''}" placeholder="開始" style="width:72px;">
+        <span style="font-weight:bold;">➔</span>
+        <input type="text" class="drop-end comma-input" value="${item.endQty ? formatNumber(item.endQty) : ''}" placeholder="結束" style="width:72px;">
+        <span style="font-size:12px; font-weight:bold;">個</span>
+        <button class="btn-sm btn-danger drop-del-btn" data-didx="${idx}">✕</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.drop-name, .drop-price, .drop-start, .drop-end').forEach(input => {
+      input.oninput = function() {
+        const row = this.closest('.drop-item-row');
+        const dIdx = Number(row.getAttribute('data-didx'));
+        tab.dropItems[dIdx].name = row.querySelector('.drop-name').value;
+        tab.dropItems[dIdx].price = parseNumber(row.querySelector('.drop-price').value);
+        tab.dropItems[dIdx].startQty = parseNumber(row.querySelector('.drop-start').value);
+        tab.dropItems[dIdx].endQty = parseNumber(row.querySelector('.drop-end').value);
+        saveExpDataLocally();
+        calculateExpEfficiency();
+      };
+    });
+
+    container.querySelectorAll('.drop-del-btn').forEach(btn => {
+      btn.onclick = function() {
+        const dIdx = Number(this.getAttribute('data-didx'));
+        tab.dropItems.splice(dIdx, 1);
+        saveExpDataLocally();
+        renderDropItemsForActiveTab();
+        calculateExpEfficiency();
+      };
+    });
+  }
+
+  function syncExpFormToData() {
+    const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
+    if (!tab) return;
+
+    tab.author = document.getElementById('expSubTabAuthor').value;
+    tab.testMinutes = parseNumber(document.getElementById('expTestMinutes').value);
+    tab.expStart = parseNumber(document.getElementById('expStart').value);
+    tab.expEnd = parseNumber(document.getElementById('expEnd').value);
+    tab.mesosStart = parseNumber(document.getElementById('mesosStart').value);
+    tab.mesosEnd = parseNumber(document.getElementById('mesosEnd').value);
+    tab.dropWeaponQty = parseNumber(document.getElementById('dropWeaponQty').value);
+
+    tab.hpPrice = parseNumber(document.getElementById('hpPrice').value);
+    tab.hpStart = parseNumber(document.getElementById('hpStart').value);
+    tab.hpEnd = parseNumber(document.getElementById('hpEnd').value);
+
+    tab.mpPrice = parseNumber(document.getElementById('mpPrice').value);
+    tab.mpStart = parseNumber(document.getElementById('mpStart').value);
+    tab.mpEnd = parseNumber(document.getElementById('mpEnd').value);
+
+    tab.cherryPrice = parseNumber(document.getElementById('cherryPrice').value);
+    tab.cherryStart = parseNumber(document.getElementById('cherryStart').value);
+    tab.cherryEnd = parseNumber(document.getElementById('cherryEnd').value);
+
+    saveExpDataLocally();
+    calculateExpEfficiency();
+  }
+
+  document.getElementById('btnAddExpTab').onclick = function() {
+    const authorName = prompt('請輸入此分頁的名稱：', '我的測試區');
+    if (authorName !== null) {
+      const newTab = JSON.parse(JSON.stringify(defaultExpTab));
+      newTab.author = authorName.trim() || '未命名';
+      localExpData.expTabs.push(newTab);
+      localExpData.activeExpTabIdx = localExpData.expTabs.length - 1;
+      saveExpDataLocally();
+      loadActiveExpTabToUI();
+    }
+  };
+
+  document.getElementById('btnDelExpTab').onclick = function() {
+    if (localExpData.expTabs.length <= 1) {
+      alert('至少需保留一個分頁！');
+      return;
+    }
+    if (confirm('確定要刪除當前分頁嗎？')) {
+      localExpData.expTabs.splice(localExpData.activeExpTabIdx, 1);
+      localExpData.activeExpTabIdx = Math.max(0, localExpData.activeExpTabIdx - 1);
+      saveExpDataLocally();
+      loadActiveExpTabToUI();
+    }
+  };
+
+  document.getElementById('btnClearExpNumbers').onclick = function() {
+    const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
+    if (!tab) return;
+
+    if (confirm('確定要清空當前分頁的數字嗎？（尾巴、觸角的名稱與單價會保留，數量會歸零）')) {
+      tab.testMinutes = 60;
+      tab.expStart = 0;
+      tab.expEnd = 0;
+      tab.mesosStart = 0;
+      tab.mesosEnd = 0;
+      tab.dropWeaponQty = 0;
+      tab.hpPrice = 0;
+      tab.hpStart = 0;
+      tab.hpEnd = 0;
+      tab.mpPrice = 0;
+      tab.mpStart = 0;
+      tab.mpEnd = 0;
+      tab.cherryPrice = 0;
+      tab.cherryStart = 0;
+      tab.cherryEnd = 0;
+
+      if (tab.dropItems) {
+        tab.dropItems.forEach(item => {
+          // 尾巴、觸角保留名稱與單價，只清空數量；其他項目也清空數量
+          item.startQty = 0;
+          item.endQty = 0;
+          if (item.qty !== undefined) delete item.qty;
+        });
+      }
+
+      saveExpDataLocally();
+      loadActiveExpTabToUI();
+      alert('已成功清空統計數字，尾巴與觸角的名稱與單價已保留！');
+    }
+  };
+
+  document.getElementById('btnAddDropItem').onclick = function() {
+    const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
+    if (!tab.dropItems) tab.dropItems = [];
+    tab.dropItems.push({ name: "新掉落物", price: 0, startQty: 0, endQty: 0 });
+    saveExpDataLocally();
+    renderDropItemsForActiveTab();
+  };
+
+  function calculateExpEfficiency() {
+    const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
+    if (!tab) return;
+
+    const durationMinutes = Number(tab.testMinutes) || 60;
+    const expStart = Number(tab.expStart) || 0;
+    const expEnd = Number(tab.expEnd) || 0;
+    const totalExp = Math.max(0, expEnd - expStart);
+
+    const mesosStart = Number(tab.mesosStart) || 0;
+    const mesosEnd = Number(tab.mesosEnd) || 0;
+    const baseMesos = Math.max(0, mesosEnd - mesosStart);
+
+    let dropMesos = 0;
+    if (tab.dropItems) {
+      tab.dropItems.forEach(item => {
+        // 相容舊資料：若還有 qty 則直接使用
+        const gained = item.qty !== undefined
+          ? (Number(item.qty) || 0)
+          : Math.max(0, (Number(item.endQty) || 0) - (Number(item.startQty) || 0));
+        dropMesos += (Number(item.price) || 0) * gained;
+      });
+    }
+
+    const weaponQty = Number(tab.dropWeaponQty) || 0;
+    const weaponMesos = weaponQty * 400000;
+
+    const hpCost = (Number(tab.hpPrice) || 0) * Math.max(0, (Number(tab.hpStart) || 0) - (Number(tab.hpEnd) || 0));
+    const mpCost = (Number(tab.mpPrice) || 0) * Math.max(0, (Number(tab.mpStart) || 0) - (Number(tab.mpEnd) || 0));
+    const cherryCost = (Number(tab.cherryPrice) || 0) * Math.max(0, (Number(tab.cherryStart) || 0) - (Number(tab.cherryEnd) || 0));
+
+    const totalCost = hpCost + mpCost + cherryCost;
+    const totalNetMesos = baseMesos + dropMesos + weaponMesos - totalCost;
+
+    const safeMinutes = durationMinutes > 0 ? durationMinutes : 60;
+    const expPerMin = totalExp / safeMinutes;
+    const mesosPerMin = totalNetMesos / safeMinutes;
+
+    const exp10m = Math.round(expPerMin * 10);
+    const mesos10m = Math.round(mesosPerMin * 10);
+    const exp1h = Math.round(expPerMin * 60);
+    const mesos1h = Math.round(mesosPerMin * 60);
+
+    document.getElementById('resTotalExp').innerText = formatNumber(totalExp);
+    document.getElementById('resTotalMesos').innerText = formatNumber(totalNetMesos) + ' 楓幣';
+    document.getElementById('resExp10m').innerText = formatNumber(exp10m);
+    document.getElementById('resMesos10m').innerText = formatNumber(mesos10m) + ' 楓幣';
+    document.getElementById('resExp1h').innerText = formatNumber(exp1h);
+    document.getElementById('resMesos1h').innerText = formatNumber(mesos1h) + ' 楓幣';
+  }
+
+  document.querySelectorAll('#tabContent-exp input').forEach(input => {
+    input.oninput = function() {
+      syncExpFormToData();
+    };
+  });
+
+  function renderProductManageList() {
+    syncRawMaterials();
+    const container = document.getElementById('productManageList');
+    if (appData.products.length === 0) {
+      container.innerHTML = '<div style="color:#888;">目前沒有任何成品資料。</div>';
+      return;
+    }
+
+    container.innerHTML = appData.products.map((p, idx) => `
+      <div class="product-manage-row">
+        <div class="product-manage-info">
+          <span class="product-manage-title">${p.name}</span>
+          <span class="product-manage-sub">${p.isOreRecipe ? '⛏️ 母礦煉製物' : '📋 組合裝備'} | 預設市場參考價: ${formatNumber(p.marketPrice || 0)} 楓幣</span>
+        </div>
+        <div class="product-manage-actions">
+          <button class="btn-sm btn-primary btn-edit-prod" data-idx="${idx}" title="編輯配方">✏️ 編輯</button>
+          <button class="btn-sm btn-danger btn-del-prod" data-idx="${idx}" title="刪除項目">🗑️ 刪除</button>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-edit-prod').forEach(btn => {
+      btn.onclick = function() {
+        editingProductIndex = Number(this.getAttribute('data-idx'));
+        openEditModal(editingProductIndex);
+      };
+    });
+
+    container.querySelectorAll('.btn-del-prod').forEach(btn => {
+      btn.onclick = function() {
+        const idx = Number(this.getAttribute('data-idx'));
+        const pName = appData.products[idx].name;
+        if (confirm(`確定要刪除成品「${pName}」嗎？`)) {
+          appData.products.splice(idx, 1);
+          saveDataToCloud();
+          refreshUI();
+        }
+      };
+    });
+  }
+
+  function openEditModal(idx) {
+    const p = appData.products[idx];
+    syncRawMaterials();
+    const allMatKeys = Object.keys(appData.rawMaterials);
+    const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
+
+    const body = document.getElementById('modalEditBody');
+    body.innerHTML = `
+      <div style="margin-bottom:12px;">
+        <label style="font-weight:bold; font-size:13px;">成品名稱：</label>
+        <input type="text" id="modalName" value="${p.name}" style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-weight:bold; font-size:13px;">預設市場參考價 (僅供管理參考)：</label>
+        <input type="text" id="modalMarketPrice" class="comma-input" value="${formatNumber(p.marketPrice || 0)}" style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="cursor:pointer; font-weight:bold; color:#c55a11;">
+          <input type="checkbox" id="modalIsOre" ${p.isOreRecipe ? 'checked' : ''}> 母礦煉製物
+        </label>
+      </div>
+      <div id="modalRecipeContainer">
+        ${p.isOreRecipe ? `
+          <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
+            <div style="margin-bottom:8px;">母礦：
+              <select id="modalOreName" style="margin-top:4px;">
+                ${allMatKeys.map(mat => `<option value="${mat}" ${mat === p.oreName ? 'selected' : ''}>${mat}</option>`).join('')}
+              </select>
+            </div>
+            <div>手續費：
+              <input type="text" id="modalOreFee" class="comma-input" value="${formatNumber(p.craftFee || 300)}" style="margin-top:4px;">
+            </div>
+          </div>
+        ` : `
+          <div style="margin-bottom:10px;">
+            製作費：<input type="text" id="modalCraftFee" class="comma-input" value="${formatNumber(p.craftFee || 0)}" style="margin-top:4px;"> 楓幣
+          </div>
+          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
+          <div id="modalIngredientsList">
+            ${(p.ingredients || []).map((ing, iIdx) => `
+              <div style="display:flex; gap:8px; margin-bottom:6px; align-items:center;" class="modal-ing-row" data-iidx="${iIdx}">
+                <select class="modal-ing-name" style="flex:1;">
+                  ${allItemNames.map(mat => `<option value="${mat}" ${mat === ing.name ? 'selected' : ''}>${mat}</option>`).join('')}
+                </select>
+                <input type="text" class="modal-ing-qty comma-input" value="${formatNumber(ing.qty)}" style="width:80px;">個
+                <button class="btn-sm btn-danger modal-del-ing">✕</button>
+              </div>
+            `).join('')}
+          </div>
+          <button class="btn-sm btn-secondary" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
+        `}
+      </div>
+    `;
+
+    document.getElementById('modalIsOre').onchange = function() {
+      const isOre = this.checked;
+      const container = document.getElementById('modalRecipeContainer');
+      if (isOre) {
+        container.innerHTML = `
+          <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
+            <div style="margin-bottom:8px;">母礦：
+              <select id="modalOreName" style="margin-top:4px;">
+                ${allMatKeys.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
+              </select>
+            </div>
+            <div>手續費：
+              <input type="text" id="modalOreFee" class="comma-input" value="300" style="margin-top:4px;">
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div style="margin-bottom:10px;">
+            製作費：<input type="text" id="modalCraftFee" class="comma-input" value="0" style="margin-top:4px;"> 楓幣
+          </div>
+          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
+          <div id="modalIngredientsList"></div>
+          <button class="btn-sm btn-secondary" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
+        `;
+        document.getElementById('modalAddIngBtn').onclick = addModalIngRow;
+      }
+      bindCommaInputs();
+    };
+
+    if (!p.isOreRecipe) {
+      document.getElementById('modalAddIngBtn').onclick = addModalIngRow;
+      attachModalDelIngEvents();
+    }
+
+    bindCommaInputs();
+    document.getElementById('editModal').classList.add('active');
+  }
+
+  function addModalIngRow() {
+    syncRawMaterials();
+    const allMatKeys = Object.keys(appData.rawMaterials);
+    const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
+    const list = document.getElementById('modalIngredientsList');
+    const div = document.createElement('div');
+    div.style.cssText = "display:flex; gap:8px; margin-bottom:6px; align-items:center;";
+    div.className = "modal-ing-row";
+    div.innerHTML = `
+      <select class="modal-ing-name" style="flex:1;">
+        ${allItemNames.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
+      </select>
+      <input type="text" class="modal-ing-qty comma-input" value="1" style="width:80px;">個
+      <button class="btn-sm btn-danger modal-del-ing">✕</button>
+    `;
+    list.appendChild(div);
+    div.querySelector('.modal-del-ing').onclick = function() { div.remove(); };
+    bindCommaInputs();
+  }
+
+  function attachModalDelIngEvents() {
+    document.querySelectorAll('.modal-del-ing').forEach(btn => {
+      btn.onclick = function() {
+        this.closest('.modal-ing-row').remove();
+      };
+    });
+  }
+
+  document.getElementById('btnCloseModal').onclick = function() {
+    document.getElementById('editModal').classList.remove('active');
+  };
+
+  document.getElementById('btnSaveModal').onclick = function() {
+    if (editingProductIndex === null) return;
+    const p = appData.products[editingProductIndex];
+    const newName = document.getElementById('modalName').value.trim();
+    if (!newName) { alert('名稱不能為空！'); return; }
+
+    p.name = newName;
+    p.marketPrice = parseNumber(document.getElementById('modalMarketPrice').value);
+    p.isOreRecipe = document.getElementById('modalIsOre').checked;
+
+    if (p.isOreRecipe) {
+      p.oreName = document.getElementById('modalOreName').value;
+      p.craftFee = parseNumber(document.getElementById('modalOreFee').value);
+      p.ingredients = [];
+    } else {
+      p.craftFee = parseNumber(document.getElementById('modalCraftFee').value);
+      p.ingredients = [];
+      document.querySelectorAll('.modal-ing-row').forEach(row => {
+        const ingName = row.querySelector('.modal-ing-name').value;
+        const ingQty = parseNumber(row.querySelector('.modal-ing-qty').value);
+        if (ingName && ingQty > 0) {
+          p.ingredients.push({ name: ingName, qty: ingQty });
+        }
+      });
+    }
+
+    saveDataToCloud();
+    refreshUI();
+    document.getElementById('editModal').classList.remove('active');
+  };
+
+  document.getElementById('btnConfirmAddProduct').onclick = function() {
+    const nameInput = document.getElementById('newProdNameInput');
+    const isOreCb = document.getElementById('newProdIsOreCb');
+    const name = nameInput.value.trim();
+    if (!name) { alert('請輸入成品名稱！'); return; }
+
+    if (appData.products.some(p => p.name === name)) {
+      alert('此成品名稱已存在！');
+      return;
+    }
+
+    syncRawMaterials();
+    const firstMat = Object.keys(appData.rawMaterials)[0] || "青銅母礦";
+
+    const newProd = isOreCb.checked ? {
+      name: name,
+      isOreRecipe: true,
+      oreName: firstMat,
+      craftFee: 300,
+      marketPrice: 50000,
+      ingredients: []
+    } : {
+      name: name,
+      isOreRecipe: false,
+      craftFee: 0,
+      marketPrice: 100000,
+      ingredients: []
+    };
+
+    appData.products.push(newProd);
+    nameInput.value = '';
+    isOreCb.checked = false;
+    saveDataToCloud();
+    refreshUI();
+    alert(`成功新增「${name}」！`);
+  };
+
+  function updateGalleryDisplay() {
+    const leftImg = document.getElementById('leftGalleryImg');
+    const rightImg = document.getElementById('rightGalleryImg');
+    const topImg = document.getElementById('topBannerImg');
+
+    if (appData.bgImages && appData.bgImages.length > 0) {
+      currentBgIndex = currentBgIndex % appData.bgImages.length;
+      leftImg.src = appData.bgImages[currentBgIndex];
+      rightImg.src = appData.bgImages[currentBgIndex];
+    } else {
+      leftImg.src = "";
+      rightImg.src = "";
+    }
+
+    if (appData.bannerImages && appData.bannerImages.length > 0) {
+      currentBannerIndex = currentBannerIndex % appData.bannerImages.length;
+      topImg.src = appData.bannerImages[currentBannerIndex];
+    } else {
+      topImg.src = "";
+    }
+
+    renderThumbnails();
+  }
+
+  function renderThumbnails() {
+    const bgThumbs = document.getElementById('bgThumbsContainer');
+    bgThumbs.innerHTML = (appData.bgImages || []).map((url, i) => `
+      <div class="bg-thumb-item ${i === currentBgIndex ? 'active' : ''}">
+        <img src="${url}" data-bidx="${i}" class="click-bg-thumb">
+        <button class="bg-thumb-del del-bg-btn" data-bidx="${i}">✕</button>
+      </div>
+    `).join('');
+
+    const bannerThumbs = document.getElementById('bannerThumbsContainer');
+    bannerThumbs.innerHTML = (appData.bannerImages || []).map((url, i) => `
+      <div class="bg-thumb-item ${i === currentBannerIndex ? 'active' : ''}">
+        <img src="${url}" data-banidx="${i}" class="click-banner-thumb">
+        <button class="bg-thumb-del del-banner-btn" data-banidx="${i}">✕</button>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.click-bg-thumb').forEach(img => {
+      img.onclick = function() { currentBgIndex = Number(this.getAttribute('data-bidx')); updateGalleryDisplay(); };
+    });
+    document.querySelectorAll('.del-bg-btn').forEach(btn => {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        const idx = Number(this.getAttribute('data-bidx'));
+        appData.bgImages.splice(idx, 1);
+        if (appData.bgImages.length === 0) appData.bgImages.push("https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80");
+        saveDataToCloud();
+        updateGalleryDisplay();
+      };
+    });
+
+    document.querySelectorAll('.click-banner-thumb').forEach(img => {
+      img.onclick = function() { currentBannerIndex = Number(this.getAttribute('data-banidx')); updateGalleryDisplay(); };
+    });
+    document.querySelectorAll('.del-banner-btn').forEach(btn => {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        const idx = Number(this.getAttribute('data-banidx'));
+        appData.bannerImages.splice(idx, 1);
+        if (appData.bannerImages.length === 0) appData.bannerImages.push("https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80");
+        saveDataToCloud();
+        updateGalleryDisplay();
+      };
+    });
+
+    document.getElementById('slideshowToggle').checked = appData.slideshowActive;
+    document.getElementById('slideshowInterval').value = appData.slideshowTime || 10000;
+    setupSlideshowTimer();
+  }
+
+  function setupSlideshowTimer() {
+    if (slideshowTimer) clearInterval(slideshowTimer);
+    if (appData.slideshowActive) {
+      const interval = Number(appData.slideshowTime) || 10000;
+      slideshowTimer = setInterval(() => {
+        if (appData.bgImages && appData.bgImages.length > 0) {
+          currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
+        }
+        if (appData.bannerImages && appData.bannerImages.length > 0) {
+          currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
+        }
+        updateGalleryDisplay();
+      }, interval);
+    }
+  }
+
+  document.getElementById('slideshowToggle').onchange = function() {
+    appData.slideshowActive = this.checked;
+    saveDataToCloud();
+    setupSlideshowTimer();
+  };
+  document.getElementById('slideshowInterval').onchange = function() {
+    appData.slideshowTime = Number(this.value);
+    saveDataToCloud();
+    setupSlideshowTimer();
+  };
+
+  document.getElementById('bgFileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        if (!appData.bgImages) appData.bgImages = [];
+        appData.bgImages.push(event.target.result);
+        saveDataToCloud();
+        updateGalleryDisplay();
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  document.getElementById('btnAddBgUrl').onclick = function() {
+    const url = document.getElementById('bgUrlInput').value.trim();
+    if (url) {
+      if (!appData.bgImages) appData.bgImages = [];
+      appData.bgImages.push(url);
+      saveDataToCloud();
+      updateGalleryDisplay();
+      document.getElementById('bgUrlInput').value = '';
+    }
+  };
+
+  document.getElementById('bannerFileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        if (!appData.bannerImages) appData.bannerImages = [];
+        appData.bannerImages.push(event.target.result);
+        saveDataToCloud();
+        updateGalleryDisplay();
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  document.getElementById('btnAddBannerUrl').onclick = function() {
+    const url = document.getElementById('bannerUrlInput').value.trim();
+    if (url) {
+      if (!appData.bannerImages) appData.bannerImages = [];
+      appData.bannerImages.push(url);
+      saveDataToCloud();
+      updateGalleryDisplay();
+      document.getElementById('bannerUrlInput').value = '';
+    }
+  };
+
+  // ========== 卷軸金字塔衝卷成本計算機 ==========
+  let scrollStages = [
+    { rate: 10, price: 0, residualSell: 0, slots: 1, needSuccess: 1 },
+    { rate: 60, price: 0, residualSell: 0, slots: 1, needSuccess: 1 }
+  ];
+
+  function renderScrollStages() {
+    const container = document.getElementById('scrollStagesContainer');
+    if (!container) return;
+    const isGroup = document.getElementById('modeGroup') && document.getElementById('modeGroup').checked;
+
+    container.innerHTML = scrollStages.map((stage, idx) => `
+      <div class="drop-item-row" data-sidx="${idx}" style="background:#f8f9fa; padding:10px 12px; border-radius:8px; margin-bottom:8px; border:1px solid #eee; flex-wrap:wrap; gap:8px; align-items:center;">
+        <div style="flex:0 0 70px; font-weight:bold; color:#1f497d; font-size:14px;">${isGroup ? '第'+(idx+1)+'組' : '第'+(idx+1)+'張'}</div>
+        <input type="text" class="scroll-rate comma-input" value="${stage.rate}" placeholder="%" style="width:55px; text-align:center;">
+        <span style="font-size:13px; font-weight:bold;">%</span>
+        <input type="text" class="scroll-price comma-input" value="${stage.price ? formatNumber(stage.price) : ''}" placeholder="單價（45=45萬）" style="flex:1; min-width:120px;">
+        <input type="text" class="scroll-residual comma-input" value="${stage.residualSell ? formatNumber(stage.residualSell) : ''}" placeholder="${isGroup ? (stage.slots||1)+'過'+Math.max(0,(stage.needSuccess||1)-1)+'售價' : '殘次售價'}" style="flex:1; min-width:110px;">
+        ${isGroup ? `
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px;">共</span>
+            <input type="text" class="scroll-slots comma-input" value="${stage.slots || 1}" style="width:45px; text-align:center;">
+            <span style="font-size:12px;">張</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px;">需過</span>
+            <input type="text" class="scroll-need comma-input" value="${stage.needSuccess || 1}" style="width:45px; text-align:center;">
+            <span style="font-size:12px;">次</span>
+          </div>
+        ` : ''}
+        <button class="btn-sm btn-danger scroll-del-btn" data-sidx="${idx}">✕</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.scroll-rate, .scroll-price, .scroll-residual, .scroll-slots, .scroll-need').forEach(input => {
+      input.oninput = function() {
+        const row = this.closest('.drop-item-row');
+        const sIdx = Number(row.getAttribute('data-sidx'));
+        scrollStages[sIdx].rate = parseNumber(row.querySelector('.scroll-rate').value) || 0;
+
+        const priceInput = row.querySelector('.scroll-price');
+        let priceStr = priceInput.value.trim();
+        let priceVal = 0;
+        if (priceStr) {
+          if (priceStr.includes('萬') || priceStr.includes('w')) {
+            priceVal = parseNumber(priceStr);
+          } else {
+            const clean = priceStr.replace(/,/g, '');
+            const num = parseFloat(clean) || 0;
+            priceVal = num < 10000 ? Math.round(num * 10000) : Math.round(num);
+          }
+        }
+        scrollStages[sIdx].price = priceVal;
+        scrollStages[sIdx].residualSell = parseNumber(row.querySelector('.scroll-residual').value);
+        if (row.querySelector('.scroll-slots')) {
+          scrollStages[sIdx].slots = Math.max(1, parseNumber(row.querySelector('.scroll-slots').value) || 1);
+        }
+        if (row.querySelector('.scroll-need')) {
+          scrollStages[sIdx].needSuccess = Math.max(1, parseNumber(row.querySelector('.scroll-need').value) || 1);
+        }
+        // 即時更新殘次 placeholder：目標是 X過Y 時，殘次顯示 X過(Y-1)
+        const residualInput = row.querySelector('.scroll-residual');
+        if (residualInput && isGroup) {
+          const slots = scrollStages[sIdx].slots || 1;
+          const need = scrollStages[sIdx].needSuccess || 1;
+          const residualLevel = Math.max(0, need - 1);
+          residualInput.placeholder = slots + '過' + residualLevel + '售價';
+        }
+        calculateScrollCost();
+        updateFinalSellLabel();
+      };
+    });
+
+    container.querySelectorAll('.scroll-price').forEach(input => {
+      input.addEventListener('blur', function() {
+        const row = this.closest('.drop-item-row');
+        const sIdx = Number(row.getAttribute('data-sidx'));
+        const val = scrollStages[sIdx].price;
+        this.value = val ? formatNumber(val) : '';
+      });
+    });
+
+    container.querySelectorAll('.scroll-del-btn').forEach(btn => {
+      btn.onclick = function() {
+        const sIdx = Number(this.getAttribute('data-sidx'));
+        if (scrollStages.length <= 1) { alert('至少保留一組'); return; }
+        scrollStages.splice(sIdx, 1);
+        renderScrollStages();
+        calculateScrollCost();
+      };
+    });
+
+    bindCommaInputs();
+  }
+
+  document.getElementById('btnAddScrollStage').onclick = function() {
+    scrollStages.push({ rate: 30, price: 0, residualSell: 0, slots: 1, needSuccess: 1 });
+    renderScrollStages();
+    calculateScrollCost();
+  };
+
+  function updateFinalSellLabel() {
+    const label = document.getElementById('scrollFinalSellLabel');
+    if (!label) return;
+    const isGroup = document.getElementById('modeGroup') && document.getElementById('modeGroup').checked;
+    if (isGroup && scrollStages.length > 0) {
+      const last = scrollStages[scrollStages.length - 1];
+      const slots = last.slots || 1;
+      const need = last.needSuccess || 1;
+      label.innerText = `最終成品市場售價（${slots}過${need}）：`;
+    } else {
+      label.innerText = '最終成品市場售價：';
+    }
+  }
+
+  function calculateScrollCost() {
+    const basePrice = parseNumber(document.getElementById('scrollBasePrice').value);
+    const baseNpcSell = parseNumber(document.getElementById('scrollBaseNpcSell').value);
+    const finalSell = parseNumber(document.getElementById('scrollFinalSell').value);
+
+    if (scrollStages.length === 0 || scrollStages.some(s => s.rate <= 0 || s.rate > 100)) {
+      document.getElementById('scrollNeedBase').innerText = '—';
+      document.getElementById('scrollTotalScrollCost').innerText = '—';
+      document.getElementById('scrollResidualIncome').innerText = '—';
+      document.getElementById('scrollNetCost').innerText = '—';
+      document.getElementById('scrollNetIncome3').innerText = '—';
+      document.getElementById('scrollProfit3').innerText = '—';
+      document.getElementById('scrollAdvice').innerText = '請設定正確的成功率 (1~100)';
+      return;
+    }
+
+    const isPyramid = document.getElementById('modePyramid').checked;
+    const isGroup = document.getElementById('modeGroup') && document.getElementById('modeGroup').checked;
+    const rates = scrollStages.map(s => s.rate / 100);
+    const n = rates.length;
+
+    let needEnter = new Array(n).fill(0);
+    if (isGroup) {
+      // 分組模式：每一組「共 N 張，需過 N 次」＝必須整組全過，失敗就整組重來
+      for (let i = 0; i < n; i++) {
+        const slots = scrollStages[i].slots || 1;
+        const need = scrollStages[i].needSuccess || slots;
+        // 如果需過次數 == 張數，代表必須全過
+        if (need >= slots) {
+          const pAll = Math.pow(rates[i], slots);
+          needEnter[i] = slots / pAll; // 期望嘗試次數（含重來）
+        } else {
+          // 否則用一般期望（需要 k 次成功）
+          needEnter[i] = need / rates[i];
+        }
+      }
+    } else {
+      // 金字塔：必須依序全過
+      needEnter[n - 1] = 1 / rates[n - 1];
+      for (let i = n - 2; i >= 0; i--) {
+        needEnter[i] = needEnter[i + 1] / rates[i];
+      }
+    }
+    const needBase = needEnter[0];
+
+    let totalScrollCost = 0;
+    let residualIncome = 0;
+
+    for (let i = 0; i < n; i++) {
+      const attempts = needEnter[i];
+      totalScrollCost += attempts * scrollStages[i].price;
+
+      const fails = attempts * (1 - rates[i]);
+      if (isGroup) {
+        // 分組模式：沒達到目標的殘次品，賣該組設定的殘次售價
+        // 期望失敗組數 ≈ attempts * (1 - p^slots) 或簡化用 fails 比例
+        const residualPrice = scrollStages[i].residualSell || 0;
+        if (residualPrice > 0) {
+          // 粗估：每次嘗試失敗時可回收的殘次收入
+          residualIncome += fails * residualPrice;
+        }
+      } else {
+        if (i === 0) {
+          residualIncome += fails * baseNpcSell;
+        } else {
+          residualIncome += fails * (scrollStages[i - 1].residualSell || 0);
+        }
+      }
+    }
+
+    // 注意：最終成功的不賣殘次價，而是賣 finalSell
+    // 中間成功但沒繼續的已經在 fails 裡算過了
+
+    const totalCost = needBase * basePrice + totalScrollCost;
+    const netCost = totalCost - residualIncome; // 扣除殘次回收後的淨成本
+    const netIncome3 = Math.floor(finalSell * 0.97);
+    const profit3 = netIncome3 - netCost;
+
+    document.getElementById('scrollNeedBase').innerText = needBase.toFixed(2) + ' 件';
+    document.getElementById('scrollTotalScrollCost').innerText = formatNumber(Math.round(totalScrollCost)) + ' 楓幣';
+    document.getElementById('scrollResidualIncome').innerText = formatNumber(Math.round(residualIncome)) + ' 楓幣';
+    document.getElementById('scrollNetCost').innerText = formatNumber(Math.round(netCost)) + ' 楓幣';
+    document.getElementById('scrollNetIncome3').innerText = formatNumber(netIncome3) + ' 楓幣';
+    document.getElementById('scrollProfit3').innerText = formatNumber(Math.round(profit3)) + ' 楓幣';
+
+    const advice = document.getElementById('scrollAdvice');
+    const profitEl = document.getElementById('scrollProfit3');
+    if (profit3 > 0 && finalSell > 0) {
+      profitEl.style.color = '#28a745';
+      advice.innerText = `✅ 預估獲利！純利潤率約 ${((profit3 / finalSell) * 100).toFixed(1)}%`;
+      advice.style.color = '#28a745';
+    } else if (profit3 < 0) {
+      profitEl.style.color = '#dc3545';
+      advice.innerText = `⚠ 預估虧損 ${formatNumber(Math.abs(Math.round(profit3)))} 楓幣`;
+      advice.style.color = '#dc3545';
+    } else {
+      profitEl.style.color = '#6c757d';
+      advice.innerText = '➖ 大約打平';
+      advice.style.color = '#6c757d';
+    }
+  }
+
+  // 綁定基底與最終售價的即時計算
+  ['scrollBasePrice', 'scrollBaseNpcSell', 'scrollFinalSell'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.oninput = calculateScrollCost;
+    }
+  });
+
+  // 模式切換時重新計算
+  document.querySelectorAll('input[name="scrollMode"]').forEach(radio => {
+    radio.onchange = function() {
+      renderScrollStages();
+      calculateScrollCost();
+    };
+  });
+
+  // 初始化卷軸階段
+  renderScrollStages();
+  updateFinalSellLabel();
+  calculateScrollCost();
+
+  // 左右大背景
+  function setFullSideBg(side, url) {
+    const el = document.getElementById(side === 'left' ? 'fullSideLeft' : 'fullSideRight');
+    if (el) {
+      el.style.backgroundImage = url ? `url('${url}')` : 'none';
+    }
+    localStorage.setItem('maple_fullside_' + side, url || '');
+  }
+
+  document.getElementById('leftSideFile').onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { setFullSideBg('left', ev.target.result); e.target.value = ''; };
+    reader.readAsDataURL(file);
+  };
+  document.getElementById('rightSideFile').onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { setFullSideBg('right', ev.target.result); e.target.value = ''; };
+    reader.readAsDataURL(file);
+  };
+  document.getElementById('btnSetLeft').onclick = function() {
+    const url = document.getElementById('leftSideUrl').value.trim();
+    if (url) setFullSideBg('left', url);
+  };
+  document.getElementById('btnSetRight').onclick = function() {
+    const url = document.getElementById('rightSideUrl').value.trim();
+    if (url) setFullSideBg('right', url);
+  };
+
+  const savedFullLeft = localStorage.getItem('maple_fullside_left');
+  const savedFullRight = localStorage.getItem('maple_fullside_right');
+  if (savedFullLeft) setFullSideBg('left', savedFullLeft);
+  if (savedFullRight) setFullSideBg('right', savedFullRight);
+
+  // ========== 設定頁管理員密碼 ==========
+  const SETTINGS_PASSWORD = "maple123"; // 可自行修改
+  document.getElementById('btnSettingsLogin').onclick = function() {
+    const pwd = document.getElementById('settingsPassword').value;
+    if (pwd === SETTINGS_PASSWORD) {
+      document.getElementById('settingsLoginBox').style.display = 'none';
+      document.getElementById('settingsContent').style.display = 'block';
+      localStorage.setItem('maple_settings_auth', '1');
+    } else {
+      document.getElementById('settingsLoginMsg').innerText = '密碼錯誤';
+    }
+  };
+  if (localStorage.getItem('maple_settings_auth') === '1') {
+    document.getElementById('settingsLoginBox').style.display = 'none';
+    document.getElementById('settingsContent').style.display = 'block';
+  }
+
+  // ========== 全頁大背景（含大小、位置、歷史） ==========
+  let fullBgHistory = JSON.parse(localStorage.getItem('maple_full_bg_history') || '[]');
+
+  function applyFullBackground(url, size, position) {
+    if (url) {
+      document.body.style.backgroundImage = `url('${url}')`;
+      document.body.style.backgroundSize = size || document.getElementById('fullBgSize').value || 'cover';
+      document.body.style.backgroundPosition = position || document.getElementById('fullBgPosition').value || 'center';
+      document.body.style.backgroundAttachment = 'fixed';
+      document.body.style.backgroundRepeat = 'no-repeat';
+    } else {
+      document.body.style.backgroundImage = 'none';
+    }
+  }
+
+  function saveFullBgHistory(url) {
+    if (!url) return;
+    fullBgHistory = fullBgHistory.filter(u => u !== url);
+    fullBgHistory.unshift(url);
+    if (fullBgHistory.length > 12) fullBgHistory.pop();
+    localStorage.setItem('maple_full_bg_history', JSON.stringify(fullBgHistory));
+    renderFullBgHistory();
+  }
+
+  function renderFullBgHistory() {
+    const box = document.getElementById('fullBgHistory');
+    if (!box) return;
+    box.innerHTML = fullBgHistory.map(url => `
+      <div style="width:70px; height:50px; border-radius:6px; overflow:hidden; border:2px solid #ddd; cursor:pointer; position:relative;">
+        <img src="${url}" style="width:100%; height:100%; object-fit:cover;" data-url="${url}">
+      </div>
+    `).join('');
+    box.querySelectorAll('img').forEach(img => {
+      img.onclick = function() {
+        const url = this.getAttribute('data-url');
+        applyFullBackground(url);
+        localStorage.setItem('maple_full_bg', url);
+      };
+    });
+  }
+
+  document.getElementById('fullBgFileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const url = event.target.result;
+        applyFullBackground(url);
+        localStorage.setItem('maple_full_bg', url);
+        saveFullBgHistory(url);
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  document.getElementById('btnSetFullBgUrl').onclick = function() {
+    const url = document.getElementById('fullBgUrlInput').value.trim();
+    if (url) {
+      applyFullBackground(url);
+      localStorage.setItem('maple_full_bg', url);
+      saveFullBgHistory(url);
+      document.getElementById('fullBgUrlInput').value = '';
+    }
+  };
+
+  document.getElementById('fullBgSize').onchange = function() {
+    const url = localStorage.getItem('maple_full_bg');
+    if (url) applyFullBackground(url, this.value);
+  };
+  document.getElementById('fullBgPosition').onchange = function() {
+    const url = localStorage.getItem('maple_full_bg');
+    if (url) applyFullBackground(url, null, this.value);
+  };
+
+  document.getElementById('btnClearFullBg').onclick = function() {
+    applyFullBackground('');
+    localStorage.removeItem('maple_full_bg');
+  };
+
+  const savedFullBg = localStorage.getItem('maple_full_bg');
+  if (savedFullBg) applyFullBackground(savedFullBg);
+  renderFullBgHistory();
+
+  function refreshUI() {
+    renderMarketGrid();
+    renderProductDropdown();
+    onProductChange();
+    renderProductManageList();
+    loadActiveExpTabToUI();
+    updateGalleryDisplay();
+  }
+
+});
+
+  // ========== DPM 傷害計算機 ==========
+  function calcDPM() {
+    const primary = Number(document.getElementById('dpmPrimary')?.value) || 0;
+    const secondary = Number(document.getElementById('dpmSecondary')?.value) || 0;
+    const attack = Number(document.getElementById('dpmAttack')?.value) || 0;
+    const mastery = (Number(document.getElementById('dpmMastery')?.value) || 0) / 100;
+    const weaponVal = document.getElementById('dpmWeapon')?.value || "4.2,4.2";
+    const [maxC, minC] = weaponVal.split(',').map(Number);
+    const skill = (Number(document.getElementById('dpmSkill')?.value) || 0) / 100;
+    const hits = Number(document.getElementById('dpmHits')?.value) || 1;
+    const critRate = (Number(document.getElementById('dpmCritRate')?.value) || 0) / 100;
+    const critDmg = (Number(document.getElementById('dpmCritDmg')?.value) || 0) / 100;
+    const finalDmg = (Number(document.getElementById('dpmFinalDmg')?.value) || 100) / 100;
+    const defense = Number(document.getElementById('dpmDefense')?.value) || 0;
+    const levelDiff = Number(document.getElementById('dpmLevelDiff')?.value) || 0;
+
+    const maxRange = Math.floor((primary * maxC + secondary) * attack / 100);
+    const minRange = Math.floor((primary * minC * 0.9 * mastery + secondary) * attack / 100);
+
+    let maxDmg = maxRange * skill * finalDmg;
+    let minDmg = minRange * skill * finalDmg;
+
+    const defFactor = 100 / (defense + 100);
+    maxDmg *= defFactor;
+    minDmg *= defFactor;
+
+    if (levelDiff > 0) {
+      let penalty = levelDiff < 10
+        ? 1 / (levelDiff * levelDiff * 0.005 + 1)
+        : 1 / (levelDiff * 0.05 + 1);
+      maxDmg *= penalty;
+      minDmg *= penalty;
+    }
+
+    maxDmg = Math.floor(maxDmg);
+    minDmg = Math.floor(minDmg);
+
+    const avgNoCrit = (minDmg + maxDmg) / 2;
+    const avgCrit = avgNoCrit * (1 + critDmg);
+    const avg = avgNoCrit * (1 - critRate) + avgCrit * critRate;
+    const dpm = Math.floor(avg * hits);
+
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+    set('dpmRange', minRange.toLocaleString() + ' ~ ' + maxRange.toLocaleString());
+    set('dpmDmg', minDmg.toLocaleString() + ' ~ ' + maxDmg.toLocaleString());
+    set('dpmAvg', Math.floor(avg).toLocaleString());
+    set('dpmResult', dpm.toLocaleString());
+
+    const note = document.getElementById('dpmCritNote');
+    if (note) {
+      note.innerText = critRate > 0
+        ? '爆擊機率 ' + (critRate * 100).toFixed(0) + '% · 爆傷 +' + (critDmg * 100).toFixed(0) + '%'
+        : '';
+    }
+  }
+
+  // 綁定 DPM 輸入事件
+  setTimeout(() => {
+    document.querySelectorAll('#tabContent-dpm input, #tabContent-dpm select').forEach(el => {
+      el.addEventListener('input', calcDPM);
+      el.addEventListener('change', calcDPM);
+    });
+    calcDPM();
+  }, 500);
+
+</script>
+
 </body>
 </html>

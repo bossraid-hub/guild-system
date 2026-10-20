@@ -564,76 +564,106 @@
         // start    : 開始日期 'YYYY-MM-DD'（沒有就填今天）
         // end      : 結束日期 'YYYY-MM-DD'（維護前 = 當天）
         // 每週更新時：只刪除 end 已過期的項目，未到期的保留，再新增本週新的
-        const scheduleUpdatedAt = ref('2026/10/13');
+        const scheduleUpdatedAt = ref('2026/10/20');
         const scheduleItems = ref([
+          // 活動
           {
-            id: 'drop-up-w3',
+            id: 'halloween-signin',
+            type: 'event',
+            icon: '🎃',
+            title: '28天每日簽到活動',
+            desc: '每天登入自動簽到，豐富獎勵',
+            start: '2026-10-20',
+            end: '2026-11-17'
+          },
+          {
+            id: 'halloween-enhance',
+            type: 'event',
+            icon: '💪',
+            title: '萬聖節強化競賽',
+            desc: '強化[活動]萬聖節戒指，爭奪百鍊名匠稱號',
+            start: '2026-10-20',
+            end: '2026-12-01'
+          },
+          {
+            id: 'halloween-coin',
+            type: 'event',
+            icon: '🪙',
+            title: '南瓜硬幣商店',
+            desc: '狩獵收集南瓜硬幣兌換特別道具',
+            start: '2026-10-20',
+            end: '2026-11-17'
+          },
+          {
+            id: 'halloween-growth',
+            type: 'event',
+            icon: '👻',
+            title: '萬聖節成長活動',
+            desc: '陰森的氣息、經驗加成、組隊任務4倍',
+            start: '2026-10-20',
+            end: '2026-11-17'
+          },
+          {
+            id: 'halloween-potion',
+            type: 'event',
+            icon: '💊',
+            title: '微微安的神祕藥水商店',
+            desc: '楓幣購買常用恢復道具',
+            start: '2026-10-20',
+            end: '2026-11-17'
+          },
+          {
+            id: 'drop-up-w4',
             type: 'event',
             icon: '⚔️',
-            title: '第 3 週突襲主要道具掉落率 UP',
-            desc: '殘暴炎魔、困難拉圖斯、艾畢奈亞（毒）',
-            start: '2026-10-13',
-            end: '2026-10-20'
+            title: '第4週突襲主要道具掉落率 UP',
+            desc: '本週指定突襲BOSS主要道具掉落提升',
+            start: '2026-10-20',
+            end: '2026-10-27'
           },
+          // 商城
           {
-            id: 'shop-witch-potion',
-            type: 'shop',
-            icon: '🧪',
-            title: '巫婆的藥水禮包',
-            desc: '1,600 WC　｜　帳號限購 5 次',
-            start: '2026-10-06',
-            end: '2026-10-20'
-          },
-          {
-            id: 'shop-witch-magic',
-            type: 'shop',
-            icon: '✨',
-            title: '巫婆的魔法藥水禮包',
-            desc: '1,600 WC　｜　帳號限購 5 次',
-            start: '2026-10-06',
-            end: '2026-10-20'
-          },
-          {
-            id: 'shop-raul',
-            type: 'shop',
-            icon: '🎫',
-            title: '拉烏爾的突襲挑戰禮包',
-            desc: '660 WC　｜　帳號限購 10 次',
-            start: '2026-10-06',
-            end: '2026-10-20'
-          },
-          {
-            id: 'shop-stan',
+            id: 'shop-camilla',
             type: 'shop',
             icon: '📦',
-            title: '長老斯坦的狩獵準備箱',
-            desc: '50 WC　｜　帳號限購 1 次',
-            start: '2026-10-06',
-            end: '2026-10-20'
+            title: '卡蜜拉的成長支援禮包',
+            desc: '50 WC　｜　帳號限購1次',
+            start: '2026-10-20',
+            end: '2026-11-03'
           },
           {
-            id: 'soon-halloween',
-            type: 'soon',
+            id: 'shop-pumpkin',
+            type: 'shop',
             icon: '🎃',
-            title: '萬聖節特別活動',
-            desc: 'Coming Soon（日期未公布）',
+            title: '南瓜的特別禮包',
+            desc: '13,200 WC　｜　帳號限購5次',
             start: '2026-10-20',
-            end: '2026-11-03'
+            end: '2026-11-17'
           },
           {
-            id: 'soon-arkarium',
-            type: 'soon',
-            icon: '😈',
-            title: '突襲「阿卡伊農」',
-            desc: 'Coming Soon（日期未公布）',
+            id: 'shop-hans',
+            type: 'shop',
+            icon: '🎒',
+            title: '漢斯的冒險補給禮包',
+            desc: '6,600 WC　｜　帳號限購3次',
             start: '2026-10-20',
-            end: '2026-11-03'
+            end: '2026-11-17'
+          },
+          {
+            id: 'shop-athena',
+            type: 'shop',
+            icon: '⚔️',
+            title: '雅典娜女神的阿卡伊農挑戰禮包',
+            desc: '4,000 WC　｜　帳號限購1次',
+            start: '2026-10-20',
+            end: '2026-12-01'
           }
         ]);
         const scheduleNotes = ref([
-          '掉落率2倍券開啟後需於 14 天內使用，逾期自動刪除',
-          '所有禮包開啟後保管期限 2 週，販售結束後無法退款',
-          '中秋活動已於 10/13 維護結束'
+          '掉落率／經驗值加倍券開啟後須於14天內使用，逾期自動刪除',
+          '所有禮包發放至郵箱，保管14天，開啟後無法退款',
+          '萬聖節活動相關道具多數無法交易',
+          '第4週突襲掉落UP至10/27維護前'
         ]);
         // ========== 活動時間軸資料結束 ==========
 

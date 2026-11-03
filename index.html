@@ -580,7 +580,7 @@
         // start    : 開始日期 'YYYY-MM-DD'（沒有就填今天）
         // end      : 結束日期 'YYYY-MM-DD'（維護前 = 當天）
         // 每週更新時：只刪除 end 已過期的項目，未到期的保留，再新增本週新的
-        const scheduleUpdatedAt = ref('2026/10/20');
+        const scheduleUpdatedAt = ref('2026/11/03');
         const scheduleItems = ref([
           // 活動
           {
@@ -606,7 +606,7 @@
             type: 'event',
             icon: '🪙',
             title: '南瓜硬幣商店',
-            desc: '收集至11/17，商店開放至12/1',
+            desc: '收集至11/17，商店開放至12/1（已新增商品）',
             start: '2026-10-20',
             end: '2026-12-01'
           },
@@ -629,15 +629,24 @@
             end: '2026-11-17'
           },
           {
-            id: 'drop-up-w4',
+            id: 'pumpkin-knock',
             type: 'event',
-            icon: '⚔️',
-            title: '第4週突襲主要道具掉落率 UP',
-            desc: '克雷塞爾、拉圖斯',
-            start: '2026-10-20',
-            end: '2026-10-27'
+            icon: '🔨',
+            title: '迷你遊戲：南瓜敲敲樂',
+            desc: '打破南瓜獲得禮物與南瓜硬幣',
+            start: '2026-11-03',
+            end: '2026-11-17'
           },
-          // 商城禮包
+          {
+            id: 'pumpkin-ghost',
+            type: 'event',
+            icon: '👻',
+            title: '活動BOSS：南瓜幽靈的陰森舞會',
+            desc: '配合音樂燈光攻擊，每日指定時間登場',
+            start: '2026-11-03',
+            end: '2026-11-17'
+          },
+          // 商城禮包（未到期保留）
           {
             id: 'shop-camilla',
             type: 'shop',
@@ -788,7 +797,7 @@
           '掉落率／經驗值加倍券開啟後須於14天內使用，逾期自動刪除',
           '所有禮包發放至郵箱，保管14天，開啟後無法退款',
           '萬聖節活動相關道具多數無法交易',
-          '第4週突襲掉落UP至10/27維護前'
+          '南瓜敲敲樂與南瓜幽靈舞會至11/17維護前'
         ]);
         // 禮包內容物展開狀態
         const expandedContents = ref({});

@@ -580,9 +580,9 @@
         // start    : 開始日期 'YYYY-MM-DD'（沒有就填今天）
         // end      : 結束日期 'YYYY-MM-DD'（維護前 = 當天）
         // 每週更新時：只刪除 end 已過期的項目，未到期的保留，再新增本週新的
-        const scheduleUpdatedAt = ref('2026/11/03');
+        const scheduleUpdatedAt = ref('2026/11/10');
         const scheduleItems = ref([
-          // 活動
+          // 活動（未到期保留）
           {
             id: 'halloween-signin',
             type: 'event',
@@ -646,20 +646,7 @@
             start: '2026-11-03',
             end: '2026-11-17'
           },
-          // 商城禮包（未到期保留）
-          {
-            id: 'shop-camilla',
-            type: 'shop',
-            icon: '📦',
-            title: '卡蜜拉的成長支援禮包',
-            desc: '50 WC　｜　帳號限購1次',
-            start: '2026-10-20',
-            end: '2026-11-03',
-            contents: [
-              { name: '經驗值3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' },
-              { name: '掉落率3倍券(10分鐘)', qty: 1, note: '開啟後14天內使用' }
-            ]
-          },
+          // 商城禮包（未到期保留 + 新增）
           {
             id: 'shop-pumpkin',
             type: 'shop',
@@ -791,13 +778,137 @@
               { name: '可愛紫木偶', qty: 1, note: '開啟後不可交易' },
               { name: '可愛橘木偶', qty: 1, note: '開啟後不可交易' }
             ]
+          },
+          // 11/10 新增
+          {
+            id: 'shop-malay',
+            type: 'shop',
+            icon: '🏝️',
+            title: '馬萊尼西亞島寶藏探索禮包',
+            desc: '1,320 WC　｜　角色限購1次（Lv.150+）',
+            start: '2026-11-10',
+            end: '2026-12-08',
+            contents: [
+              { name: '掉落率2倍券(20分鐘)', qty: 3, note: '開啟後14天內使用' },
+              { name: '[專屬] 幸運戒指(15日)', qty: 1, note: '開啟後可使用15天' },
+              { name: '高級瞬移之石', qty: 5, note: '' },
+              { name: '特殊藥水', qty: 100, note: '' }
+            ]
+          },
+          {
+            id: 'shop-meso-machine',
+            type: 'shop',
+            icon: '💰',
+            title: '楓幣機器成長衝刺禮包',
+            desc: '1,320 WC　｜　角色限購1次（Lv.150+）',
+            start: '2026-11-10',
+            end: '2026-12-08',
+            contents: [
+              { name: '經驗值2倍券(20分鐘)', qty: 3, note: '開啟後14天內使用' },
+              { name: '[專屬] 血盟戒指(15日)', qty: 1, note: '開啟後可使用15天' },
+              { name: '護身符', qty: 5, note: '' },
+              { name: '特殊藥水', qty: 100, note: '' }
+            ]
+          },
+          // 雙11限時優惠（11/11～11/13）
+          {
+            id: 'shop-double11-role',
+            type: 'shop',
+            icon: '🎁',
+            title: '角色養成禮包（雙11優惠）',
+            desc: '800 WC（原價1,000）　｜　帳號限購1次',
+            start: '2026-11-11',
+            end: '2026-11-13',
+            contents: [
+              { name: '歐洛拉戒指(15日)', qty: 1, note: '開啟後可使用15天' },
+              { name: '高級瞬移之石', qty: 11, note: '' },
+              { name: '天氣效果箱', qty: 1, note: '' },
+              { name: '突襲額外入場券', qty: 3, note: '' }
+            ]
+          },
+          {
+            id: 'shop-double11-magi',
+            type: 'shop',
+            icon: '🛡️',
+            title: '麥吉的庇護禮包（雙11優惠）',
+            desc: '1,040 WC（原價1,300）　｜　帳號限購1次',
+            start: '2026-11-11',
+            end: '2026-11-13',
+            contents: [
+              { name: '生命的庇護箱', qty: 1, note: '' },
+              { name: '天氣效果箱', qty: 2, note: '' },
+              { name: '突襲額外獎勵隨機寶箱', qty: 1, note: '' }
+            ]
+          },
+          {
+            id: 'shop-double11-lulu',
+            type: 'shop',
+            icon: '✨',
+            title: '露露的黃金幸運隨機寶箱（雙11）',
+            desc: '2,490 WC（原價3,000）　｜　帳號限購1次',
+            start: '2026-11-11',
+            end: '2026-11-13',
+            contents: [
+              { name: '凍結加持器', qty: 11, note: '' },
+              { name: '黃金突襲券隨機寶箱', qty: 1, note: '' }
+            ]
+          },
+          {
+            id: 'shop-double11-darli',
+            type: 'shop',
+            icon: '🌙',
+            title: '達爾利的月光隨機禮包（雙11）',
+            desc: '3,400 WC（原價4,000）　｜　帳號限購1次',
+            start: '2026-11-11',
+            end: '2026-11-13',
+            contents: [
+              { name: '可疊加的飄雪結晶', qty: 11, note: '' },
+              { name: '高級瞬移之石', qty: 11, note: '' },
+              { name: '月光稀有隨機寶箱', qty: 2, note: '' }
+            ]
+          },
+          {
+            id: 'shop-double11-pink',
+            type: 'shop',
+            icon: '🌸',
+            title: '粉紅泡泡夏日禮包（雙11）',
+            desc: '5,610 WC（原價6,600）　｜　帳號限購1次',
+            start: '2026-11-11',
+            end: '2026-11-13',
+            contents: [
+              { name: '艾畢奈亞的純白卷軸 10%', qty: 1, note: '' },
+              { name: '天氣效果箱', qty: 1, note: '' },
+              { name: '高效能喇叭UP', qty: 5, note: '' },
+              { name: '護身符', qty: 20, note: '' },
+              { name: '高級瞬移之石', qty: 10, note: '' },
+              { name: '掉落率2倍券(30分鐘)', qty: 5, note: '開啟後14天內使用' },
+              { name: '騎寵造型隨機箱', qty: 1, note: '' }
+            ]
+          },
+          {
+            id: 'shop-double11-moon',
+            type: 'shop',
+            icon: '🌕',
+            title: '老爺爺月妙的滿月禮包（雙11）',
+            desc: '9,328 WC（原價10,600）　｜　帳號限購1次',
+            start: '2026-11-11',
+            end: '2026-11-13',
+            contents: [
+              { name: '高級瞬移之石', qty: 33, note: '' },
+              { name: '護身符', qty: 44, note: '' },
+              { name: '凍結加持器', qty: 44, note: '' },
+              { name: '高效能喇叭UP', qty: 5, note: '' },
+              { name: '掉落率2倍券(30分鐘)', qty: 5, note: '開啟後14天內使用' },
+              { name: '天氣效果箱', qty: 5, note: '' },
+              { name: '滿月突襲箱', qty: 1, note: '' }
+            ]
           }
         ]);
         const scheduleNotes = ref([
           '掉落率／經驗值加倍券開啟後須於14天內使用，逾期自動刪除',
           '所有禮包發放至郵箱，保管14天，開啟後無法退款',
           '萬聖節活動相關道具多數無法交易',
-          '南瓜敲敲樂與南瓜幽靈舞會至11/17維護前'
+          '雙11優惠禮包僅限 11/11 08:00～11/13 07:59'
         ]);
         // 禮包內容物展開狀態
         const expandedContents = ref({});
